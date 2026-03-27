@@ -1,0 +1,190 @@
+.chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.chart-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+}
+
+.chart-card-header h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+/* Legend row shared by bar charts and line chart */
+.chart-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.chart-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-legend-text {
+  font-size: 0.73rem;
+  color: var(--color-text-muted);
+  margin-right: 10px;
+}
+
+/* Tooltip */
+.chart-tooltip {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.chart-tooltip-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+/* Donut layout */
+.donut-layout {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-svg-wrap {
+  flex: 0 0 180px;
+  max-width: 180px;
+}
+
+.donut-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: default;
+  transition: opacity 150ms;
+}
+
+.donut-legend-item.is-hovered .donut-legend-label {
+  color: var(--color-text-primary);
+}
+
+.donut-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.donut-legend-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.donut-legend-label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  transition: color 150ms;
+}
+
+.donut-legend-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.donut-legend-value small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* Bar animations */
+@keyframes barGrowH {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes barGrowV {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.h-bar {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: barGrowH 600ms ease-out both;
+}
+
+.v-bar {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: barGrowV 600ms ease-out both;
+}
+
+/* Line path draw animation */
+@keyframes lineAppear {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.line-path {
+  animation: lineAppear 700ms ease-out both;
+}
+
+/* Donut segment animation */
+@keyframes donutAppear {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.donut-segment {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.donut-segment--0 { animation: donutAppear 500ms ease-out both; }
+.donut-segment--1 { animation: donutAppear 500ms ease-out 120ms both; }
+
+@media (max-width: 480px) {
+  .donut-layout {
+    flex-direction: column;
+  }
+  .donut-svg-wrap {
+    max-width: 160px;
+    margin: 0 auto;
+  }
+}

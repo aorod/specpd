@@ -1,0 +1,233 @@
+.uc-table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.uc-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.uc-table-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+.uc-table-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+.uc-table-scroll {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .uc-table-scroll {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.uc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.uc-table thead tr {
+  background: var(--color-surface-2);
+}
+
+.uc-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover {
+  color: var(--color-text-secondary);
+}
+
+.th-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sort-icon {
+  color: var(--color-border);
+  flex-shrink: 0;
+}
+
+.sort-icon--active {
+  color: var(--color-accent);
+}
+
+.uc-table td {
+  padding: 10px 16px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.uc-table-row {
+  animation: rowFadeIn 200ms ease-out both;
+  transition: background 120ms;
+}
+
+.uc-table-row:hover {
+  background: var(--color-surface-2);
+}
+
+.uc-table-row:last-child td {
+  border-bottom: none;
+}
+
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.uc-table-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 32px !important;
+  white-space: normal !important;
+}
+
+.cell-id {
+  font-weight: 600;
+  color: var(--color-accent) !important;
+  font-size: 0.78rem;
+}
+
+.cell-title {
+  max-width: 240px;
+  white-space: nowrap !important;
+  overflow: hidden;
+}
+
+.title-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-primary);
+}
+
+.cell-type {
+  color: var(--color-text-muted) !important;
+  font-size: 0.75rem;
+}
+
+/* State badges */
+.state-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* States reais do Azure DevOps */
+.state-badge--construindo        { background: rgba(96, 165, 250, 0.12);  color: #60a5fa; }
+.state-badge--desenvolvimento    { background: rgba(59, 130, 246, 0.12);  color: #93c5fd; }
+.state-badge--testando           { background: rgba(168, 85, 247, 0.12);  color: #c084fc; }
+.state-badge--finalizado         { background: var(--color-normal-bg);    color: var(--color-normal); }
+.state-badge--pronto-para-deploy { background: rgba(20, 184, 166, 0.12);  color: #2dd4bf; }
+.state-badge--não-iniciado       { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+.state-badge--stand-by           { background: rgba(251, 191, 36, 0.12);  color: #fbbf24; }
+.state-badge--stand-by-interno   { background: rgba(251, 191, 36, 0.10);  color: #f59e0b; }
+.state-badge--stand-by-externo   { background: rgba(245, 158, 11, 0.10);  color: #d97706; }
+.state-badge--devolvidos         { background: rgba(249, 115, 22, 0.12);  color: #fb923c; }
+.state-badge--removido           { background: rgba(75, 85, 99, 0.10);    color: #6b7280; }
+
+/* Fluxo badges */
+.fluxo-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fluxo-badge--normal { background: var(--color-normal-bg); color: var(--color-normal); }
+.fluxo-badge--er     { background: var(--color-er-bg);     color: var(--color-er); }
+
+/* Pagination */
+.uc-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.pagination-info {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-pages {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 150ms, color 150ms, opacity 150ms;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
