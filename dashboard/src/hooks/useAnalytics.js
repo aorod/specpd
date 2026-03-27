@@ -7,10 +7,19 @@ export function useAnalytics(endpoint = '') {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchAnalytics(endpoint)
+    const controller = new AbortController();
+
+    setLoading(true);
+    setError(null);
+
+    fetchAnalytics(endpoint, controller.signal)
       .then(setData)
-      .catch(setError)
+      .catch(err => {
+        if (err.name !== 'AbortError') setError(err);
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [endpoint]);
 
   return { data, loading, error };

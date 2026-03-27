@@ -98,3 +98,39 @@ body {
   color: #0078d4;
   white-space: nowrap;
 }
+
+.charts-item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.charts-item-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: #e8f0fe;
+  color: #0078d4;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.chart-section {
+  margin-top: 24px;
+}
+
+.chart-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.charts-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
