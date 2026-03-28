@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, ArrowDownUp } from 'lucide-react';
+import { Users, ArrowDownUp } from 'lucide-react';
 import { aliasName } from '../../utils/nameAliases.js';
 import './Charts.css';
 
@@ -28,7 +28,7 @@ export default function RequisitoChart({ data }) {
   return (
     <div className="chart-card">
       <div className="chart-card-header">
-        <FileText size={16} />
+        <Users size={16} />
         <h3>Requisito</h3>
         <button
           onClick={() => setAsc((v) => !v)}
