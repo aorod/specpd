@@ -37,7 +37,7 @@ export default function Dashboard() {
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
   const cardDefs = [
-    { id: 'total',  icon: Layers,        label: 'Total de UCs',      value: metrics.totalUCs,     detail: null,                             accent: 'neutral' },
+    { id: 'total',  icon: Layers,        label: 'Total de Caso de Uso',      value: metrics.totalUCs,     detail: null,                             accent: 'neutral' },
     { id: 'normal', icon: FileCheck,     label: 'Fluxo Normal',       value: metrics.fluxoNormal,  detail: `${metrics.pctNormal}% do total`, accent: 'success' },
     { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa', value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`,     accent: 'er'      },
     { id: 'semReq', icon: FileMinus,     label: 'Sem Documentação',   value: metrics.semRequisito, detail: null,                             accent: 'warning' },
@@ -51,7 +51,7 @@ export default function Dashboard() {
       <div className="dashboard-sticky-top">
         <header className="dashboard-header">
           <div>
-            <h1 className="dashboard-title">Dashboard UC</h1>
+            <h1 className="dashboard-title">E&D Dashboard</h1>
             <p className="dashboard-subtitle">Acompanhamento de Casos de Uso</p>
           </div>
           <div className="dashboard-header-right">
