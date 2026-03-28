@@ -1,11 +1,28 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, X } from 'lucide-react';
-import { FLUXO_NORMAL, FLUXO_ER } from '../../utils/classifyFluxo.js';
+import { ChevronDown, Check, X, Search } from 'lucide-react';
+import { classifyFluxo } from '../../utils/classifyFluxo.js';
 import { formatMesLabel } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
 import './FilterBar.css';
 
-const FLUXO_OPTIONS = [FLUXO_NORMAL, FLUXO_ER];
+function filterExcluding(data, filters, excludeKey) {
+  return data.filter((item) => {
+    if (excludeKey !== 'anos'      && filters.anos.length > 0      && !filters.anos.includes(item.ano)) return false;
+    if (excludeKey !== 'meses'     && filters.meses.length > 0     && !filters.meses.includes(item.mes)) return false;
+    if (excludeKey !== 'states'    && filters.states.length > 0    && !filters.states.includes(item.state)) return false;
+    if (excludeKey !== 'produtos'  && filters.produtos.length > 0  && !filters.produtos.includes(item.produto)) return false;
+    if (excludeKey !== 'requisitos' && filters.requisitos.length > 0) {
+      const val = !item.requisito ? 'Sem Requisito' : item.requisito === 'linked' ? 'Com Requisito' : item.requisito;
+      if (!filters.requisitos.includes(val)) return false;
+    }
+    if (excludeKey !== 'designers' && filters.designers.length > 0) {
+      const val = item.designer || 'Sem Designer';
+      if (!filters.designers.includes(val)) return false;
+    }
+    if (excludeKey !== 'fluxos' && filters.fluxos.length > 0 && !filters.fluxos.includes(classifyFluxo(item))) return false;
+    return true;
+  });
+}
 
 function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   const [open, setOpen] = useState(false);
@@ -63,40 +80,49 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   );
 }
 
-export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, onClose }) {
+export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, search, onSearchChange }) {
   const options = useMemo(() => {
-    const anos     = [...new Set(data.map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
-    const meses    = [...new Set(data.map((d) => d.mes).filter(Boolean))].sort();
-    const states   = [...new Set(data.map((d) => d.state).filter(Boolean))].sort();
-    const produtos = [...new Set(data.map((d) => d.produto).filter(Boolean))].sort();
-    const designers = [...new Set(data.map((d) => d.designer || 'Sem Designer'))].sort();
-    const requisitos = [...new Set(data.map((d) => {
+    const anos      = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+    const meses     = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
+    const states    = [...new Set(filterExcluding(data, filters, 'states').map((d) => d.state).filter(Boolean))].sort();
+    const produtos  = [...new Set(filterExcluding(data, filters, 'produtos').map((d) => d.produto).filter(Boolean))].sort();
+    const designers = [...new Set(filterExcluding(data, filters, 'designers').map((d) => d.designer || 'Sem Designer'))].sort();
+    const requisitos = [...new Set(filterExcluding(data, filters, 'requisitos').map((d) => {
       if (!d.requisito) return 'Sem Requisito';
       if (d.requisito === 'linked') return 'Com Requisito';
       return d.requisito;
     }))].sort();
-    return { anos, meses, states, produtos, designers, requisitos };
-  }, [data]);
+    const fluxos    = [...new Set(filterExcluding(data, filters, 'fluxos').map((d) => classifyFluxo(d)))].sort();
+    return { anos, meses, states, produtos, designers, requisitos, fluxos };
+  }, [data, filters]);
 
   if (!open) return null;
 
+  const hasAnyFilter = isActive || !!search.trim();
+
   return (
-    <aside className="filter-sidebar">
-      <div className="filter-sidebar-header">
-        <span className="filter-sidebar-title">Filtros</span>
-        <div className="filter-sidebar-actions">
-          {isActive && (
-            <button className="filter-clear-btn" onClick={clearFilters}>
-              <X size={11} /> Limpar
+    <div className="filter-bar">
+      <div className="filter-bar-body">
+        <div className="filter-search">
+          <Search size={13} className="filter-search-icon" />
+          <input
+            type="text"
+            className="filter-search-input"
+            placeholder="Buscar por título..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          {search && (
+            <button
+              className="filter-search-clear"
+              onClick={() => onSearchChange('')}
+              aria-label="Limpar busca"
+            >
+              <X size={11} />
             </button>
           )}
-          <button className="filter-close-btn" onClick={onClose} aria-label="Fechar filtros">
-            <X size={15} />
-          </button>
         </div>
-      </div>
 
-      <div className="filter-sidebar-body">
         <FilterDropdown
           label="Ano"
           options={options.anos}
@@ -138,11 +164,20 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
         />
         <FilterDropdown
           label="Fluxo"
-          options={FLUXO_OPTIONS}
+          options={options.fluxos}
           selected={filters.fluxos}
           onToggle={(v) => toggleFilter('fluxos', v)}
         />
+
+        {hasAnyFilter && (
+          <button
+            className="filter-clear-btn"
+            onClick={() => { clearFilters(); onSearchChange(''); }}
+          >
+            <X size={11} /> Limpar
+          </button>
+        )}
       </div>
-    </aside>
+    </div>
   );
 }

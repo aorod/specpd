@@ -1,20 +1,31 @@
 .dashboard {
   max-width: 1800px;
   margin: 0 auto;
-  padding: 28px 40px 48px;
+  padding: 0 40px 48px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Header */
+/* Sticky top wrapper — header + filter bar ficam juntos */
+.dashboard-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .dashboard-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 4px;
 }
 
 .dashboard-title {
@@ -166,16 +177,8 @@
   font-family: var(--font-sans);
 }
 
-/* Body: sidebar + main */
-.dashboard-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
+/* Main content */
 .dashboard-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;

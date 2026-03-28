@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
 import { useUCData } from '../../hooks/useUCData.js';
 import { useFilters } from '../../hooks/useFilters.js';
@@ -16,49 +16,72 @@ import './Dashboard.css';
 export default function Dashboard() {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
-  const metrics = useUCMetrics(filteredData);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  const displayData = useMemo(() => {
+    if (!search.trim()) return filteredData;
+    const term = search.toLowerCase();
+    return filteredData.filter((d) => d.title.toLowerCase().includes(term));
+  }, [filteredData, search]);
+
+  const metrics = useUCMetrics(displayData);
+
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">Dashboard UC</h1>
-          <p className="dashboard-subtitle">Acompanhamento de Casos de Uso</p>
-        </div>
-        <div className="dashboard-header-right">
-          {!loading && !error && (
-            <button
-              className={`filters-toggle-btn${sidebarOpen ? ' is-active' : ''}`}
-              onClick={() => setSidebarOpen((o) => !o)}
-              aria-pressed={sidebarOpen}
-            >
-              <SlidersHorizontal size={14} />
-              Filtros
-              {activeCount > 0 && (
-                <span className="filters-toggle-badge">{activeCount}</span>
-              )}
-            </button>
-          )}
-          <button
-            className="theme-toggle-btn"
-            onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')}
-            aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
-            title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          <div className="dashboard-badge">
-            <span className={`dashboard-badge-dot${loading ? ' is-loading' : ''}`} />
-            {loading ? 'Carregando...' : error ? 'Erro na carga' : `${rawData.length} UCs`}
+      <div className="dashboard-sticky-top">
+        <header className="dashboard-header">
+          <div>
+            <h1 className="dashboard-title">Dashboard UC</h1>
+            <p className="dashboard-subtitle">Acompanhamento de Casos de Uso</p>
           </div>
-        </div>
-      </header>
+          <div className="dashboard-header-right">
+            {!loading && !error && (
+              <button
+                className={`filters-toggle-btn${sidebarOpen ? ' is-active' : ''}`}
+                onClick={() => setSidebarOpen((o) => !o)}
+                aria-pressed={sidebarOpen}
+              >
+                <SlidersHorizontal size={14} />
+                Filtros
+                {(activeCount > 0 || search) && (
+                  <span className="filters-toggle-badge">{activeCount + (search ? 1 : 0)}</span>
+                )}
+              </button>
+            )}
+            <button
+              className="theme-toggle-btn"
+              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <div className="dashboard-badge">
+              <span className={`dashboard-badge-dot${loading ? ' is-loading' : ''}`} />
+              {loading ? 'Carregando...' : error ? 'Erro na carga' : `${rawData.length} UCs`}
+            </div>
+          </div>
+        </header>
+
+        {!loading && !error && (
+          <FilterBar
+            data={rawData}
+            filters={filters}
+            toggleFilter={toggleFilter}
+            clearFilters={clearFilters}
+            isActive={isActive}
+            open={sidebarOpen}
+            search={search}
+            onSearchChange={setSearch}
+          />
+        )}
+      </div>
 
       {loading && (
         <div className="dashboard-status">
@@ -78,18 +101,7 @@ export default function Dashboard() {
       )}
 
       {!loading && !error && (
-        <div className="dashboard-body">
-          <FilterBar
-            data={rawData}
-            filters={filters}
-            toggleFilter={toggleFilter}
-            clearFilters={clearFilters}
-            isActive={isActive}
-            open={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
-
-          <main className="dashboard-main">
+        <main className="dashboard-main">
             <section className="metrics-grid" aria-label="Métricas principais">
               <MetricCard icon={Layers}        label="Total de UCs"       value={metrics.totalUCs}     accent="neutral" />
               <MetricCard icon={AlertTriangle} label="Engenharia Reversa"  value={metrics.fluxoER}      detail={`${metrics.pctER}% do total`} accent="er" />
@@ -108,10 +120,9 @@ export default function Dashboard() {
             </section>
 
             <section aria-label="Tabela de UCs">
-              <UCTable data={filteredData} />
+              <UCTable data={displayData} />
             </section>
           </main>
-        </div>
       )}
     </div>
   );
