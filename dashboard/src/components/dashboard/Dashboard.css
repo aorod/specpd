@@ -177,6 +177,24 @@
   font-family: var(--font-sans);
 }
 
+/* Pinned cards row — dentro do sticky top */
+.pinned-cards-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pinned-cards-row .metric-card {
+  flex: 1;
+  min-width: 160px;
+  padding: 12px 16px;
+  animation: none;
+}
+
+.pinned-cards-row .metric-card-value {
+  font-size: 1.4rem;
+}
+
 /* Main content */
 .dashboard-main {
   display: flex;

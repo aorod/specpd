@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [search, setSearch] = useState('');
+  const [pinnedCards, setPinnedCards] = useState([]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -31,6 +32,19 @@ export default function Dashboard() {
   }, [filteredData, search]);
 
   const metrics = useUCMetrics(displayData);
+
+  const togglePin = (id) =>
+    setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
+
+  const cardDefs = [
+    { id: 'total',  icon: Layers,        label: 'Total de UCs',      value: metrics.totalUCs,     detail: null,                         accent: 'neutral' },
+    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa', value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`, accent: 'er'      },
+    { id: 'comReq', icon: FileCheck,     label: 'Com requisito',      value: metrics.comRequisito, detail: null,                         accent: 'success' },
+    { id: 'semReq', icon: FileMinus,     label: 'Sem requisito',      value: metrics.semRequisito, detail: null,                         accent: 'warning' },
+  ];
+
+  const pinnedDefs   = cardDefs.filter((c) => pinnedCards.includes(c.id));
+  const unpinnedDefs = cardDefs.filter((c) => !pinnedCards.includes(c.id));
 
   return (
     <div className="dashboard">
@@ -70,16 +84,34 @@ export default function Dashboard() {
         </header>
 
         {!loading && !error && (
-          <FilterBar
-            data={rawData}
-            filters={filters}
-            toggleFilter={toggleFilter}
-            clearFilters={clearFilters}
-            isActive={isActive}
-            open={sidebarOpen}
-            search={search}
-            onSearchChange={setSearch}
-          />
+          <>
+            <FilterBar
+              data={rawData}
+              filters={filters}
+              toggleFilter={toggleFilter}
+              clearFilters={clearFilters}
+              isActive={isActive}
+              open={sidebarOpen}
+              search={search}
+              onSearchChange={setSearch}
+            />
+            {pinnedDefs.length > 0 && (
+              <div className="pinned-cards-row">
+                {pinnedDefs.map((card) => (
+                  <MetricCard
+                    key={card.id}
+                    icon={card.icon}
+                    label={card.label}
+                    value={card.value}
+                    detail={card.detail}
+                    accent={card.accent}
+                    pinned
+                    onTogglePin={() => togglePin(card.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -102,27 +134,37 @@ export default function Dashboard() {
 
       {!loading && !error && (
         <main className="dashboard-main">
+          {unpinnedDefs.length > 0 && (
             <section className="metrics-grid" aria-label="Métricas principais">
-              <MetricCard icon={Layers}        label="Total de UCs"       value={metrics.totalUCs}     accent="neutral" />
-              <MetricCard icon={AlertTriangle} label="Engenharia Reversa"  value={metrics.fluxoER}      detail={`${metrics.pctER}% do total`} accent="er" />
-              <MetricCard icon={FileCheck}     label="Com requisito"       value={metrics.comRequisito} accent="success" />
-              <MetricCard icon={FileMinus}     label="Sem requisito"       value={metrics.semRequisito} accent="warning" />
+              {unpinnedDefs.map((card) => (
+                <MetricCard
+                  key={card.id}
+                  icon={card.icon}
+                  label={card.label}
+                  value={card.value}
+                  detail={card.detail}
+                  accent={card.accent}
+                  pinned={false}
+                  onTogglePin={() => togglePin(card.id)}
+                />
+              ))}
             </section>
+          )}
 
-            <section className="charts-grid" aria-label="Gráficos">
-              <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} />
-              <HorizontalBarChart data={metrics.porProduto} />
-              <div style={{ gridColumn: '1 / -1' }}>
-                <LineChart data={metrics.porMes} anos={filters.anos} />
-              </div>
-              <VerticalBarChart data={metrics.porDesigner} />
-              <RequisitoChart data={metrics.porRequisito} />
-            </section>
+          <section className="charts-grid" aria-label="Gráficos">
+            <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} />
+            <HorizontalBarChart data={metrics.porProduto} />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <LineChart data={metrics.porMes} anos={filters.anos} />
+            </div>
+            <VerticalBarChart data={metrics.porDesigner} />
+            <RequisitoChart data={metrics.porRequisito} />
+          </section>
 
-            <section aria-label="Tabela de UCs">
-              <UCTable data={displayData} />
-            </section>
-          </main>
+          <section aria-label="Tabela de UCs">
+            <UCTable data={displayData} />
+          </section>
+        </main>
       )}
     </div>
   );

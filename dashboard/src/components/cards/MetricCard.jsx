@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Pin, PinOff } from 'lucide-react';
 import './MetricCard.css';
 
 function useCountUp(target, duration = 600) {
@@ -29,7 +30,7 @@ function useCountUp(target, duration = 600) {
   return count;
 }
 
-export default function MetricCard({ icon: Icon, label, value, detail, accent }) {
+export default function MetricCard({ icon: Icon, label, value, detail, accent, pinned, onTogglePin }) {
   const animated = useCountUp(value);
 
   return (
@@ -44,6 +45,14 @@ export default function MetricCard({ icon: Icon, label, value, detail, accent })
           <span className="metric-card-detail">{detail}</span>
         )}
       </div>
+      <button
+        className={`metric-card-pin${pinned ? ' is-pinned' : ''}`}
+        onClick={onTogglePin}
+        title={pinned ? 'Desafixar card' : 'Fixar card no topo'}
+        aria-label={pinned ? 'Desafixar card' : 'Fixar card no topo'}
+      >
+        {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+      </button>
     </div>
   );
 }
