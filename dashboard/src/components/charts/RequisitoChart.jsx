@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Users, ArrowDownUp } from 'lucide-react';
 import { aliasName } from '../../utils/nameAliases.js';
+import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const LABEL_W = 148;
@@ -25,21 +26,19 @@ export default function RequisitoChart({ data }) {
 
   if (entries.length === 0) return null;
 
-  return (
-    <div className="chart-card">
-      <div className="chart-card-header">
-        <Users size={16} />
-        <h3>Requisito</h3>
-        <button
-          onClick={() => setAsc((v) => !v)}
-          title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
-        >
-          <ArrowDownUp size={11} />
-          {asc ? '1→9' : '9→1'}
-        </button>
-      </div>
+  const sortButton = (
+    <button
+      onClick={(e) => { e.stopPropagation(); setAsc((v) => !v); }}
+      title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
+    >
+      <ArrowDownUp size={11} />
+      {asc ? '1→9' : '9→1'}
+    </button>
+  );
 
+  return (
+    <ChartCard title="Requisito" icon={Users} actions={sortButton}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Requisito">
           <title>Requisito</title>
@@ -97,6 +96,6 @@ export default function RequisitoChart({ data }) {
           </div>
         )}
       </div>
-    </div>
+    </ChartCard>
   );
 }

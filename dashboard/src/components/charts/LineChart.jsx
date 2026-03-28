@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { formatMes } from '../../utils/formatters.js';
+import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const MES_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -70,15 +71,7 @@ export default function LineChart({ data, anos = [] }) {
     const xPos = (mi) => nm === 1 ? PAD.left + CHART_W / 2 : PAD.left + (mi / (nm - 1)) * CHART_W;
 
     return (
-      <div className="chart-card">
-        <div className="chart-card-header">
-          <TrendingUp size={16} />
-          <h3>Evolução por Mês</h3>
-          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-            {displayYears}
-          </span>
-        </div>
-
+      <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined}>
         <div className="chart-legend-row">
           {yearsInData.flatMap((year, i) => [
             <span key={`dot-${year}`} className="chart-legend-dot" style={{ background: YEAR_COLORS[i % YEAR_COLORS.length] }} />,
@@ -144,7 +137,7 @@ export default function LineChart({ data, anos = [] }) {
             </div>
           )}
         </div>
-      </div>
+      </ChartCard>
     );
   }
 
@@ -160,17 +153,7 @@ export default function LineChart({ data, anos = [] }) {
   const erPoints     = entries.map(([, v], i) => ({ x: xPos(i), y: yPos(v.fluxoER, maxVal) }));
 
   return (
-    <div className="chart-card">
-      <div className="chart-card-header">
-        <TrendingUp size={16} />
-        <h3>Evolução por Mês</h3>
-        {displayYears && (
-          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-            {displayYears}
-          </span>
-        )}
-      </div>
-
+    <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined}>
       <div className="chart-legend-row">
         <span className="chart-legend-dot" style={{ background: 'var(--color-info)' }} />
         <span className="chart-legend-text">Total de UCs</span>
@@ -228,6 +211,6 @@ export default function LineChart({ data, anos = [] }) {
           </div>
         )}
       </div>
-    </div>
+    </ChartCard>
   );
 }

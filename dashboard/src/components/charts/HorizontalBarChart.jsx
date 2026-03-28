@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BarChart2, ArrowDownUp } from 'lucide-react';
+import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const LABEL_W = 148;
@@ -22,21 +23,19 @@ export default function HorizontalBarChart({ data }) {
   const maxTotal = Math.max(...entries.map(([, v]) => v.total), 1);
   const svgH = entries.length * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-  return (
-    <div className="chart-card">
-      <div className="chart-card-header">
-        <BarChart2 size={16} />
-        <h3>Fluxo por Produto</h3>
-        <button
-          onClick={() => setAsc((v) => !v)}
-          title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
-        >
-          <ArrowDownUp size={11} />
-          {asc ? '9→1' : '1→9'}
-        </button>
-      </div>
+  const sortButton = (
+    <button
+      onClick={(e) => { e.stopPropagation(); setAsc((v) => !v); }}
+      title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
+    >
+      <ArrowDownUp size={11} />
+      {asc ? '9→1' : '1→9'}
+    </button>
+  );
 
+  return (
+    <ChartCard title="Fluxo por Produto" icon={BarChart2} actions={sortButton}>
       <div className="chart-legend-row">
         <span className="chart-legend-dot" style={{ background: 'var(--color-normal)' }} />
         <span className="chart-legend-text">Fluxo Normal</span>
@@ -117,6 +116,6 @@ export default function HorizontalBarChart({ data }) {
           </div>
         )}
       </div>
-    </div>
+    </ChartCard>
   );
 }

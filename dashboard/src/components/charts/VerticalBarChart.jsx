@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Users, ArrowDownUp } from 'lucide-react';
 import { aliasName } from '../../utils/nameAliases.js';
+import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const LABEL_W = 148;
@@ -23,21 +24,19 @@ export default function VerticalBarChart({ data }) {
   const maxTotal = Math.max(...entries.map(([, v]) => v.total), 1);
   const svgH = entries.length * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-  return (
-    <div className="chart-card">
-      <div className="chart-card-header">
-        <Users size={16} />
-        <h3>Designer</h3>
-        <button
-          onClick={() => setAsc((v) => !v)}
-          title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
-        >
-          <ArrowDownUp size={11} />
-          {asc ? '1→9' : '9→1'}
-        </button>
-      </div>
+  const sortButton = (
+    <button
+      onClick={(e) => { e.stopPropagation(); setAsc((v) => !v); }}
+      title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
+    >
+      <ArrowDownUp size={11} />
+      {asc ? '1→9' : '9→1'}
+    </button>
+  );
 
+  return (
+    <ChartCard title="Designer" icon={Users} actions={sortButton}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Designer">
           <title>Designer</title>
@@ -95,6 +94,6 @@ export default function VerticalBarChart({ data }) {
           </div>
         )}
       </div>
-    </div>
+    </ChartCard>
   );
 }

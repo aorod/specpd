@@ -124,10 +124,16 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
         </div>
 
         <FilterDropdown
-          label="Ano"
-          options={options.anos}
-          selected={filters.anos}
-          onToggle={(v) => toggleFilter('anos', v)}
+          label="Produto"
+          options={options.produtos}
+          selected={filters.produtos}
+          onToggle={(v) => toggleFilter('produtos', v)}
+        />
+        <FilterDropdown
+          label="Status"
+          options={options.states}
+          selected={filters.states}
+          onToggle={(v) => toggleFilter('states', v)}
         />
         <FilterDropdown
           label="Mês"
@@ -137,23 +143,10 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
           formatLabel={formatMesLabel}
         />
         <FilterDropdown
-          label="State"
-          options={options.states}
-          selected={filters.states}
-          onToggle={(v) => toggleFilter('states', v)}
-        />
-        <FilterDropdown
-          label="Produto"
-          options={options.produtos}
-          selected={filters.produtos}
-          onToggle={(v) => toggleFilter('produtos', v)}
-        />
-        <FilterDropdown
-          label="Requisito"
-          options={options.requisitos}
-          selected={filters.requisitos}
-          onToggle={(v) => toggleFilter('requisitos', v)}
-          formatLabel={aliasName}
+          label="Fluxo"
+          options={options.fluxos}
+          selected={filters.fluxos}
+          onToggle={(v) => toggleFilter('fluxos', v)}
         />
         <FilterDropdown
           label="Designer"
@@ -163,10 +156,17 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
           formatLabel={aliasName}
         />
         <FilterDropdown
-          label="Fluxo"
-          options={options.fluxos}
-          selected={filters.fluxos}
-          onToggle={(v) => toggleFilter('fluxos', v)}
+          label="Requisito"
+          options={options.requisitos}
+          selected={filters.requisitos}
+          onToggle={(v) => toggleFilter('requisitos', v)}
+          formatLabel={aliasName}
+        />
+        <FilterDropdown
+          label="Ano"
+          options={options.anos}
+          selected={filters.anos}
+          onToggle={(v) => toggleFilter('anos', v)}
         />
 
         {hasAnyFilter && (

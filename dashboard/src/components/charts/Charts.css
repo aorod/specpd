@@ -181,3 +181,37 @@
 .donut-segment--0 { animation: donutAppear 500ms ease-out both; }
 .donut-segment--1 { animation: donutAppear 500ms ease-out 120ms both; }
 
+/* Accordion */
+.chart-card-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.chart-card-header-spacer {
+  flex: 1;
+}
+
+.chart-card-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 200ms;
+}
+
+.chart-card-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+.chart-card.is-collapsed {
+  align-self: start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.chart-card.is-collapsed .chart-card-header {
+  margin-bottom: 0;
+}
+
+.chart-card-body {
+  margin-top: 16px;
+}
+

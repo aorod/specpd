@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PieChart } from 'lucide-react';
+import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const CX = 90;
@@ -62,11 +63,7 @@ export default function DonutChart({ normal = 0, er = 0 }) {
         })();
 
   return (
-    <div className="chart-card">
-      <div className="chart-card-header">
-        <PieChart size={16} />
-        <h3>Distribuição de Fluxo</h3>
-      </div>
+    <ChartCard title="Distribuição de Fluxo" icon={PieChart}>
       <div className="donut-layout">
         <div className="donut-svg-wrap">
           <svg width="100%" viewBox="0 0 180 180" aria-label="Donut chart — Distribuição de Fluxo">
@@ -115,6 +112,6 @@ export default function DonutChart({ normal = 0, er = 0 }) {
           ))}
         </div>
       </div>
-    </div>
+    </ChartCard>
   );
 }

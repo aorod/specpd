@@ -16,7 +16,7 @@ const SORTABLE_COLS = [
   { key: 'produto',       label: 'Produto' },
   { key: 'designer',      label: 'Designer' },
   { key: 'requisito',     label: 'Requisito' },
-  { key: 'state',         label: 'State' },
+  { key: 'state',         label: 'Status' },
   { key: 'classificacao', label: 'Classificação' },
 ];
 

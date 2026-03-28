@@ -37,10 +37,10 @@ export default function Dashboard() {
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
   const cardDefs = [
-    { id: 'total',  icon: Layers,        label: 'Total de UCs',      value: metrics.totalUCs,     detail: null,                         accent: 'neutral' },
-    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa', value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`, accent: 'er'      },
-    { id: 'comReq', icon: FileCheck,     label: 'Com requisito',      value: metrics.comRequisito, detail: null,                         accent: 'success' },
-    { id: 'semReq', icon: FileMinus,     label: 'Sem requisito',      value: metrics.semRequisito, detail: null,                         accent: 'warning' },
+    { id: 'total',  icon: Layers,        label: 'Total de UCs',      value: metrics.totalUCs,     detail: null,                             accent: 'neutral' },
+    { id: 'normal', icon: FileCheck,     label: 'Fluxo Normal',       value: metrics.fluxoNormal,  detail: `${metrics.pctNormal}% do total`, accent: 'success' },
+    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa', value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`,     accent: 'er'      },
+    { id: 'semReq', icon: FileMinus,     label: 'Sem Documentação',   value: metrics.semRequisito, detail: null,                             accent: 'warning' },
   ];
 
   const pinnedDefs   = cardDefs.filter((c) => pinnedCards.includes(c.id));
