@@ -14,12 +14,10 @@ const PROJECT = 'Roadmap%202025';
 const BASE_URL = `https://analytics.dev.azure.com/${ORG}/${PROJECT}/_odata/v3.0-preview`;
 const ORG_BASE_URL = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
 
-// Campo GUID que representa o Mês nas Analytics
 const MES_FIELD = 'Custom_ac3892be__002De47f__002D4103__002Da7a5__002D74b5b56ddb83';
 
-// Campos selecionados no WorkItems
 const WI_SELECT = [
-  'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
+  'WorkItemId', 'WorkItemSK', 'WorkItemType', 'Title', 'State', 'TagNames',
   'Custom_SubStatus', 'Custom_RequisitoSK', 'Custom_DesignerSK',
   'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
   MES_FIELD, 'AssignedToUserSK',
@@ -35,7 +33,13 @@ function parseMes(ano, mesStr) {
   return `${ano}-${monthPart}`;
 }
 
-function transformItem(item, userMap) {
+function transformItem(item, userMap, requisitoAnalystMap) {
+  const reqSK = item.Custom_RequisitoSK;
+  let requisito = '';
+  if (reqSK != null) {
+    requisito = requisitoAnalystMap.get(reqSK) || 'linked';
+  }
+
   return {
     id: `UC-${item.WorkItemId}`,
     workItemType: item.WorkItemType,
@@ -43,7 +47,7 @@ function transformItem(item, userMap) {
     assignedTo: userMap.get(item.AssignedToUserSK) || '',
     state: item.State || '',
     subStatus: item.Custom_SubStatus || '',
-    requisito: item.Custom_RequisitoSK ? 'linked' : '',
+    requisito,
     mes: parseMes(item.Custom_Ano, item[MES_FIELD]),
     designer: userMap.get(item.Custom_DesignerSK) || '',
     produto: item.Custom_ProdutoControladoria || '',
@@ -68,6 +72,29 @@ async function fetchAllPages(url, headers) {
   return items;
 }
 
+async function buildRequisitoAnalystMap(requisitoSKs, headers, userMap) {
+  const map = new Map();
+  if (!requisitoSKs.length) return map;
+
+  // Busca em lotes de 40 para não exceder o limite de URL
+  const CHUNK = 40;
+  for (let i = 0; i < requisitoSKs.length; i += CHUNK) {
+    const chunk = requisitoSKs.slice(i, i + CHUNK);
+    const inClause = chunk.map((sk) => `WorkItemSK eq ${sk}`).join(' or ');
+    const url = `${BASE_URL}/WorkItems?$filter=${encodeURIComponent(inClause)}&$select=WorkItemSK,AssignedToUserSK`;
+    try {
+      const items = await fetchAllPages(url, headers);
+      for (const r of items) {
+        const name = userMap.get(r.AssignedToUserSK) || '';
+        if (r.WorkItemSK && name) map.set(r.WorkItemSK, name);
+      }
+    } catch (e) {
+      console.warn('Aviso: não foi possível resolver analistas do requisito:', e.message);
+    }
+  }
+  return map;
+}
+
 app.get('/api/analytics', async (_req, res) => {
   const token = process.env.ADO_TOKEN;
   if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
@@ -88,8 +115,12 @@ app.get('/api/analytics', async (_req, res) => {
     const wiUrl = `${BASE_URL}/WorkItems?$filter=${filter}&$select=${WI_SELECT}`;
     const wiRaw = await fetchAllPages(wiUrl, headers);
 
-    // 3. Transforma e retorna
-    const result = wiRaw.map((item) => transformItem(item, userMap));
+    // 3. Resolve analistas de requisito (WorkItemSK dos itens linkados)
+    const requisitoSKs = [...new Set(wiRaw.map((i) => i.Custom_RequisitoSK).filter((sk) => sk != null))];
+    const requisitoAnalystMap = await buildRequisitoAnalystMap(requisitoSKs, headers, userMap);
+
+    // 4. Transforma e retorna
+    const result = wiRaw.map((item) => transformItem(item, userMap, requisitoAnalystMap));
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
