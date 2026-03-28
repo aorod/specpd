@@ -33,6 +33,32 @@
   --radius-lg: 10px;
 }
 
+/* ─── Light mode tokens ───────────────────────────────────────── */
+[data-theme="light"] {
+  /* Surfaces */
+  --color-bg:        #f0f0f5;
+  --color-surface:   #ffffff;
+  --color-surface-2: #e8e8f0;
+  --color-border:    #d4d4e0;
+
+  /* Text */
+  --color-text-primary:   #111118;
+  --color-text-secondary: #44445a;
+  --color-text-muted:     #8888a0;
+
+  /* Status — mantém as mesmas cores de status */
+  --color-normal:    #16a34a;
+  --color-normal-bg: rgba(22, 163, 74, 0.1);
+  --color-er:        #dc2626;
+  --color-er-bg:     rgba(220, 38, 38, 0.1);
+  --color-info:      #2563eb;
+  --color-info-bg:   rgba(37, 99, 235, 0.1);
+
+  /* Accent */
+  --color-accent:    #4f46e5;
+  --color-accent-bg: rgba(79, 70, 229, 0.1);
+}
+
 /* ─── Reset ───────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

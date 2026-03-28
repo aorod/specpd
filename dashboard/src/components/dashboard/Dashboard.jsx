@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
 import { useUCData } from '../../hooks/useUCData.js';
 import { useFilters } from '../../hooks/useFilters.js';
 import { useUCMetrics } from '../../hooks/useUCMetrics.js';
@@ -18,6 +18,11 @@ export default function Dashboard() {
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const metrics = useUCMetrics(filteredData);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <div className="dashboard">
@@ -40,6 +45,14 @@ export default function Dashboard() {
               )}
             </button>
           )}
+          <button
+            className="theme-toggle-btn"
+            onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
+            title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           <div className="dashboard-badge">
             <span className={`dashboard-badge-dot${loading ? ' is-loading' : ''}`} />
             {loading ? 'Carregando...' : error ? 'Erro na carga' : `${rawData.length} UCs`}
