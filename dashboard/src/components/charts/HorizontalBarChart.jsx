@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart2 } from 'lucide-react';
+import { BarChart2, ArrowDownUp } from 'lucide-react';
 import './Charts.css';
 
 const LABEL_W = 148;
@@ -12,7 +12,11 @@ const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
 
 export default function HorizontalBarChart({ data }) {
   const [tooltip, setTooltip] = useState(null);
-  const entries = [...data.entries()];
+  const [asc, setAsc] = useState(false);
+
+  const entries = [...data.entries()].sort(([, a], [, b]) =>
+    asc ? a.total - b.total : b.total - a.total
+  );
   const maxTotal = Math.max(...entries.map(([, v]) => v.total), 1);
   const svgH = entries.length * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
@@ -21,6 +25,14 @@ export default function HorizontalBarChart({ data }) {
       <div className="chart-card-header">
         <BarChart2 size={16} />
         <h3>Fluxo por Produto</h3>
+        <button
+          onClick={() => setAsc((v) => !v)}
+          title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
+        >
+          <ArrowDownUp size={11} />
+          {asc ? 'A→Z' : 'Z→A'}
+        </button>
       </div>
 
       <div className="chart-legend-row">
