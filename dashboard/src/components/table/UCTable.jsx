@@ -11,16 +11,17 @@ const MAX_PAGE_BTNS = 10;
 const ADO_BASE = 'https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/edit/';
 
 const SORTABLE_COLS = [
+  { key: 'produto',       label: 'Produto' },
   { key: 'mes',           label: 'Mês' },
   { key: 'ano',           label: 'Ano' },
-  { key: 'produto',       label: 'Produto' },
   { key: 'designer',      label: 'Designer' },
   { key: 'requisito',     label: 'Requisito' },
   { key: 'state',         label: 'Status' },
+  { key: 'subStatus',     label: 'Sub Status' },
   { key: 'classificacao', label: 'Classificação' },
 ];
 
-const TOTAL_COLS = 3 + SORTABLE_COLS.length; // ID + Título + Tipo + sortable
+const TOTAL_COLS = 2 + SORTABLE_COLS.length; // ID + Título + sortable
 
 function SortIcon({ col, sortConfig }) {
   if (sortConfig.key !== col) return <ChevronsUpDown size={13} className="sort-icon" />;
@@ -83,7 +84,6 @@ export default function UCTable({ data }) {
             <tr>
               <th scope="col">ID</th>
               <th scope="col">Título</th>
-              <th scope="col">Tipo</th>
               {SORTABLE_COLS.map(({ key, label }) => (
                 <th
                   key={key}
@@ -122,10 +122,9 @@ export default function UCTable({ data }) {
                     <td className="cell-title">
                       <span title={item.title} className="title-text">{item.title}</span>
                     </td>
-                    <td className="cell-type">{item.workItemType}</td>
+                    <td>{item.produto}</td>
                     <td>{formatMesLabel(item.mes)}</td>
                     <td>{item.ano}</td>
-                    <td>{item.produto}</td>
                     <td>{aliasName(item.designer)}</td>
                     <td>{aliasName(item.requisito)}</td>
                     <td>
@@ -133,6 +132,7 @@ export default function UCTable({ data }) {
                         {item.state}
                       </span>
                     </td>
+                    <td>{item.subStatus}</td>
                     <td>
                       <span className={`fluxo-badge fluxo-badge--${isNormal ? 'normal' : 'er'}`}>
                         {isNormal ? 'Fluxo Normal' : 'Eng. Reversa'}

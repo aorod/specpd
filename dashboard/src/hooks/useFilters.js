@@ -7,6 +7,7 @@ export const INITIAL_FILTERS = {
   anos: [DEFAULT_ANO],
   meses: [],
   states: [],
+  subStatuses: [],
   produtos: [],
   requisitos: [],
   designers: [],
@@ -21,6 +22,7 @@ export function useFilters(data) {
       if (filters.anos.length > 0 && !filters.anos.includes(item.ano)) return false;
       if (filters.meses.length > 0 && !filters.meses.includes(item.mes)) return false;
       if (filters.states.length > 0 && !filters.states.includes(item.state)) return false;
+      if (filters.subStatuses.length > 0 && !filters.subStatuses.includes(item.subStatus)) return false;
       if (filters.produtos.length > 0 && !filters.produtos.includes(item.produto)) return false;
       if (filters.requisitos.length > 0) {
         const val = !item.requisito ? 'Sem Requisito' : item.requisito === 'linked' ? 'Com Requisito' : item.requisito;
