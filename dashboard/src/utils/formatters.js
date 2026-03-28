@@ -1,13 +1,27 @@
 const MES_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const MES_NOMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 /**
  * Formata uma string "YYYY-MM" para "Mmm YYYY". Ex.: "2026-03" → "Mar 2026".
- * @param {string} mes
+ * Usado nos eixos dos gráficos de linha.
+ * @param {string} mesKey - "YYYY-MM"
  * @returns {string}
  */
-export function formatMes(mes) {
-  const [year, month] = mes.split('-');
+export function formatMes(mesKey) {
+  const [year, month] = mesKey.split('-');
   return `${MES_LABELS[parseInt(month, 10) - 1]} ${year}`;
+}
+
+/**
+ * Formata um número de mês (zero-padded) para "N - NomeMes". Ex.: "03" → "3 - Março".
+ * Usado na tabela, filtros e tooltips.
+ * @param {string} mes - "01" a "12"
+ * @returns {string}
+ */
+export function formatMesLabel(mes) {
+  const n = parseInt(mes, 10);
+  if (!n || n < 1 || n > 12) return mes || '';
+  return `${n} - ${MES_NOMES[n - 1]}`;
 }
 
 /**

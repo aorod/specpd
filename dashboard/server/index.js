@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -27,13 +27,10 @@ function authHeader(token) {
   return `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
 }
 
-function parseMes(ano, mesStr) {
-  if (!ano || !mesStr) return '';
-  const monthPart = String(mesStr).split(' - ')[0].padStart(2, '0');
-  return `${ano}-${monthPart}`;
-}
 
 function transformItem(item, userMap) {
+  const mesRaw = item[MES_FIELD] || '';
+  const monthPart = mesRaw ? String(mesRaw).split(' - ')[0].padStart(2, '0') : '';
   return {
     id: `UC-${item.WorkItemId}`,
     workItemType: item.WorkItemType,
@@ -42,7 +39,8 @@ function transformItem(item, userMap) {
     state: item.State || '',
     subStatus: item.Custom_SubStatus || '',
     requisito: userMap.get(item.Custom_RequisitoSK) || '',
-    mes: parseMes(item.Custom_Ano, item[MES_FIELD]),
+    mes: monthPart,
+    ano: String(item.Custom_Ano || ''),
     designer: userMap.get(item.Custom_DesignerSK) || '',
     produto: item.Custom_ProdutoControladoria || '',
     tags: item.TagNames || '',

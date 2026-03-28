@@ -1,129 +1,87 @@
 import { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, ArrowDownUp } from 'lucide-react';
+import { aliasName } from '../../utils/nameAliases.js';
 import './Charts.css';
 
-const PAD = { top: 16, right: 16, bottom: 52, left: 36 };
-const SVG_W = 500;
-const SVG_H = 240;
-const CHART_W = SVG_W - PAD.left - PAD.right;
-const CHART_H = SVG_H - PAD.top - PAD.bottom;
+const LABEL_W = 148;
+const BAR_AREA = 240;
+const ROW_H = 28;
+const ROW_GAP = 10;
+const PAD = 8;
+const COUNT_W = 32;
+const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
+const VISIBLE_ROWS = 6;
+const SCROLL_H = VISIBLE_ROWS * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
 export default function VerticalBarChart({ data }) {
   const [tooltip, setTooltip] = useState(null);
-  const entries = [...data.entries()];
-  const n = entries.length;
-  if (n === 0) return null;
+  const [asc, setAsc] = useState(false);
 
-  const maxVal = Math.max(...entries.map(([, v]) => v.total), 1);
-  const colW = CHART_W / n;
-  const barW = Math.min(colW * 0.55, 48);
-
-  const yScale = (v) => CHART_H - (v / maxVal) * CHART_H;
-
-  // Y-axis ticks
-  const tickCount = 4;
-  const ticks = Array.from({ length: tickCount + 1 }, (_, i) =>
-    Math.round((maxVal / tickCount) * i)
+  const entries = [...data.entries()].sort(([, a], [, b]) =>
+    asc ? a.total - b.total : b.total - a.total
   );
+  const maxTotal = Math.max(...entries.map(([, v]) => v.total), 1);
+  const svgH = entries.length * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
   return (
     <div className="chart-card">
       <div className="chart-card-header">
         <Users size={16} />
-        <h3>Requisito por Designer</h3>
+        <h3>Designer</h3>
+        <button
+          onClick={() => setAsc((v) => !v)}
+          title={asc ? 'Ordenar decrescente' : 'Ordenar crescente'}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', color: asc ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}
+        >
+          <ArrowDownUp size={11} />
+          {asc ? '1→9' : '9→1'}
+        </button>
       </div>
 
-      <div className="chart-legend-row">
-        <span className="chart-legend-dot" style={{ background: 'var(--color-info)' }} />
-        <span className="chart-legend-text">Com requisito</span>
-        <span className="chart-legend-dot" style={{ background: 'var(--color-er)' }} />
-        <span className="chart-legend-text">Sem requisito</span>
-      </div>
-
-      <div style={{ position: 'relative' }}>
-        <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} aria-label="Barras verticais — Requisito por Designer">
-          <title>Requisito por Designer</title>
-
-          {/* Grid lines + Y labels */}
-          {ticks.map((tick) => {
-            const y = PAD.top + yScale(tick);
-            return (
-              <g key={tick}>
-                <line
-                  x1={PAD.left} y1={y} x2={PAD.left + CHART_W} y2={y}
-                  stroke="var(--color-border)" strokeWidth={1}
-                />
-                <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="var(--color-text-muted)">
-                  {tick}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Bars */}
-          {entries.map(([designer, { total, comRequisito, semRequisito }], i) => {
-            const cx = PAD.left + i * colW + colW / 2;
-            const x = cx - barW / 2;
-            const comH = (comRequisito / maxVal) * CHART_H;
-            const semH = (semRequisito / maxVal) * CHART_H;
+      <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
+        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Designer">
+          <title>Designer</title>
+          {entries.map(([designer, { total }], i) => {
+            const y = PAD + i * (ROW_H + ROW_GAP);
+            const barW = (total / maxTotal) * BAR_AREA;
+            const barX = LABEL_W + PAD;
 
             return (
               <g key={designer}>
-                {/* Com requisito (bottom portion of stack) */}
-                {comH > 0 && (
-                  <rect
-                    x={x}
-                    y={PAD.top + CHART_H - comH}
-                    width={barW}
-                    height={comH}
-                    rx={3}
-                    fill="var(--color-info)"
-                    opacity={tooltip && tooltip.key !== `${designer}-c` ? 0.4 : 1}
-                    className="v-bar"
-                    style={{ animationDelay: `${i * 50}ms` }}
-                    onMouseEnter={() => setTooltip({ key: `${designer}-c`, label: 'Com requisito', value: comRequisito, designer })}
-                    onMouseLeave={() => setTooltip(null)}
-                  />
-                )}
-                {/* Sem requisito (stacked on top) */}
-                {semH > 0 && (
-                  <rect
-                    x={x}
-                    y={PAD.top + CHART_H - comH - semH}
-                    width={barW}
-                    height={semH}
-                    rx={3}
-                    fill="var(--color-er)"
-                    opacity={tooltip && tooltip.key !== `${designer}-s` ? 0.4 : 1}
-                    className="v-bar"
-                    style={{ animationDelay: `${i * 50 + 25}ms` }}
-                    onMouseEnter={() => setTooltip({ key: `${designer}-s`, label: 'Sem requisito', value: semRequisito, designer })}
-                    onMouseLeave={() => setTooltip(null)}
-                  />
-                )}
-
-                {/* Total label above bar */}
                 <text
-                  x={cx}
-                  y={PAD.top + CHART_H - comH - semH - 5}
-                  textAnchor="middle"
+                  x={LABEL_W}
+                  y={y + ROW_H / 2 + 4}
+                  textAnchor="end"
                   fontSize={11}
-                  fontWeight="600"
                   fill="var(--color-text-secondary)"
                 >
-                  {total}
+                  {(() => { const n = aliasName(designer); return n.length > 19 ? n.slice(0, 19) + '…' : n; })()}
                 </text>
 
-                {/* X label */}
+                {barW > 0 && (
+                  <rect
+                    x={barX}
+                    y={y}
+                    width={barW}
+                    height={ROW_H}
+                    rx={3}
+                    fill="var(--color-accent)"
+                    opacity={tooltip && tooltip.designer !== designer ? 0.4 : 1}
+                    className="h-bar"
+                    style={{ animationDelay: `${i * 40}ms` }}
+                    onMouseEnter={() => setTooltip({ designer, total })}
+                    onMouseLeave={() => setTooltip(null)}
+                  />
+                )}
+
                 <text
-                  x={cx}
-                  y={PAD.top + CHART_H + 18}
-                  textAnchor="middle"
-                  fontSize={10}
+                  x={barX + barW + 6}
+                  y={y + ROW_H / 2 + 4}
+                  fontSize={11}
                   fill="var(--color-text-muted)"
-                  transform={`rotate(-30, ${cx}, ${PAD.top + CHART_H + 18})`}
+                  fontWeight="600"
                 >
-                  {designer.split(' ')[0]}
+                  {total}
                 </text>
               </g>
             );
@@ -132,8 +90,8 @@ export default function VerticalBarChart({ data }) {
 
         {tooltip && (
           <div className="chart-tooltip">
-            <span className="chart-tooltip-label">{tooltip.designer}</span>
-            <span>{tooltip.label}: <strong>{tooltip.value}</strong></span>
+            <span className="chart-tooltip-label">{aliasName(tooltip.designer)}</span>
+            <span>Total de demandas: <strong>{tooltip.total}</strong></span>
           </div>
         )}
       </div>

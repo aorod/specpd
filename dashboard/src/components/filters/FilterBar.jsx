@@ -1,7 +1,8 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, X } from 'lucide-react';
 import { FLUXO_NORMAL, FLUXO_ER } from '../../utils/classifyFluxo.js';
-import { formatMes } from '../../utils/formatters.js';
+import { formatMesLabel } from '../../utils/formatters.js';
+import { aliasName } from '../../utils/nameAliases.js';
 import './FilterBar.css';
 
 const FLUXO_OPTIONS = [FLUXO_NORMAL, FLUXO_ER];
@@ -64,16 +65,17 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
 
 export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, onClose }) {
   const options = useMemo(() => {
+    const anos     = [...new Set(data.map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
     const meses    = [...new Set(data.map((d) => d.mes).filter(Boolean))].sort();
     const states   = [...new Set(data.map((d) => d.state).filter(Boolean))].sort();
     const produtos = [...new Set(data.map((d) => d.produto).filter(Boolean))].sort();
-    const designers = [...new Set(data.map((d) => d.designer).filter(Boolean))].sort();
+    const designers = [...new Set(data.map((d) => d.designer || 'Sem Designer'))].sort();
     const requisitos = [...new Set(data.map((d) => {
       if (!d.requisito) return 'Sem Requisito';
       if (d.requisito === 'linked') return 'Com Requisito';
-      return d.requisito; // nome do analista
+      return d.requisito;
     }))].sort();
-    return { meses, states, produtos, designers, requisitos };
+    return { anos, meses, states, produtos, designers, requisitos };
   }, [data]);
 
   if (!open) return null;
@@ -96,11 +98,17 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
 
       <div className="filter-sidebar-body">
         <FilterDropdown
+          label="Ano"
+          options={options.anos}
+          selected={filters.anos}
+          onToggle={(v) => toggleFilter('anos', v)}
+        />
+        <FilterDropdown
           label="Mês"
           options={options.meses}
           selected={filters.meses}
           onToggle={(v) => toggleFilter('meses', v)}
-          formatLabel={formatMes}
+          formatLabel={formatMesLabel}
         />
         <FilterDropdown
           label="State"
@@ -119,12 +127,14 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
           options={options.requisitos}
           selected={filters.requisitos}
           onToggle={(v) => toggleFilter('requisitos', v)}
+          formatLabel={aliasName}
         />
         <FilterDropdown
           label="Designer"
           options={options.designers}
           selected={filters.designers}
           onToggle={(v) => toggleFilter('designers', v)}
+          formatLabel={aliasName}
         />
         <FilterDropdown
           label="Fluxo"

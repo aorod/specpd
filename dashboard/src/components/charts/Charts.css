@@ -72,20 +72,22 @@
 /* Donut layout */
 .donut-layout {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 20px;
 }
 
 .donut-svg-wrap {
-  flex: 0 0 180px;
-  max-width: 180px;
+  width: 100%;
+  max-width: 280px;
 }
 
 .donut-legend {
-  flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
 }
 
 .donut-legend-item {
@@ -179,12 +181,3 @@
 .donut-segment--0 { animation: donutAppear 500ms ease-out both; }
 .donut-segment--1 { animation: donutAppear 500ms ease-out 120ms both; }
 
-@media (max-width: 480px) {
-  .donut-layout {
-    flex-direction: column;
-  }
-  .donut-svg-wrap {
-    max-width: 160px;
-    margin: 0 auto;
-  }
-}

@@ -8,6 +8,7 @@ import FilterBar from '../filters/FilterBar.jsx';
 import DonutChart from '../charts/DonutChart.jsx';
 import HorizontalBarChart from '../charts/HorizontalBarChart.jsx';
 import VerticalBarChart from '../charts/VerticalBarChart.jsx';
+import RequisitoChart from '../charts/RequisitoChart.jsx';
 import LineChart from '../charts/LineChart.jsx';
 import UCTable from '../table/UCTable.jsx';
 import './Dashboard.css';
@@ -86,8 +87,11 @@ export default function Dashboard() {
             <section className="charts-grid" aria-label="Gráficos">
               <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} />
               <HorizontalBarChart data={metrics.porProduto} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <LineChart data={metrics.porMes} anos={filters.anos} />
+              </div>
               <VerticalBarChart data={metrics.porDesigner} />
-              <LineChart data={metrics.porMes} />
+              <RequisitoChart data={metrics.porRequisito} />
             </section>
 
             <section aria-label="Tabela de UCs">

@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { classifyFluxo } from '../utils/classifyFluxo.js';
 
+const DEFAULT_ANO = String(new Date().getFullYear());
+
 export const INITIAL_FILTERS = {
+  anos: [DEFAULT_ANO],
   meses: [],
   states: [],
   produtos: [],
@@ -15,6 +18,7 @@ export function useFilters(data) {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.anos.length > 0 && !filters.anos.includes(item.ano)) return false;
       if (filters.meses.length > 0 && !filters.meses.includes(item.mes)) return false;
       if (filters.states.length > 0 && !filters.states.includes(item.state)) return false;
       if (filters.produtos.length > 0 && !filters.produtos.includes(item.produto)) return false;
@@ -22,7 +26,10 @@ export function useFilters(data) {
         const val = !item.requisito ? 'Sem Requisito' : item.requisito === 'linked' ? 'Com Requisito' : item.requisito;
         if (!filters.requisitos.includes(val)) return false;
       }
-      if (filters.designers.length > 0 && !filters.designers.includes(item.designer)) return false;
+      if (filters.designers.length > 0) {
+        const val = item.designer || 'Sem Designer';
+        if (!filters.designers.includes(val)) return false;
+      }
       if (filters.fluxos.length > 0 && !filters.fluxos.includes(classifyFluxo(item))) return false;
       return true;
     });

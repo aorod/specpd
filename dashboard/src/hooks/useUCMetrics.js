@@ -15,6 +15,7 @@ export function useUCMetrics(filteredData) {
     const porDesignerMap = new Map();
     const porProdutoMap = new Map();
     const porMesMap = new Map();
+    const porRequisitoMap = new Map();
 
     for (const item of filteredData) {
       const fluxo = classifyFluxo(item);
@@ -44,11 +45,20 @@ export function useUCMetrics(filteredData) {
       if (fluxo === FLUXO_NORMAL) p.fluxoNormal++;
       else p.fluxoER++;
 
-      // porMes
-      if (!porMesMap.has(item.mes)) {
-        porMesMap.set(item.mes, { total: 0, fluxoNormal: 0, fluxoER: 0 });
+      // porRequisito — somente itens com requisito vinculado
+      if (hasReq) {
+        if (!porRequisitoMap.has(item.requisito)) {
+          porRequisitoMap.set(item.requisito, { total: 0 });
+        }
+        porRequisitoMap.get(item.requisito).total++;
       }
-      const m = porMesMap.get(item.mes);
+
+      // porMes — chave "YYYY-MM" para ordenação cronológica correta
+      const mesKey = item.ano && item.mes ? `${item.ano}-${item.mes}` : (item.mes || '');
+      if (!porMesMap.has(mesKey)) {
+        porMesMap.set(mesKey, { total: 0, fluxoNormal: 0, fluxoER: 0 });
+      }
+      const m = porMesMap.get(mesKey);
       m.total++;
       if (fluxo === FLUXO_NORMAL) m.fluxoNormal++;
       else m.fluxoER++;
@@ -72,6 +82,7 @@ export function useUCMetrics(filteredData) {
       semRequisito,
       porDesigner: porDesignerMap,
       porProduto: porProdutoMap,
+      porRequisito: porRequisitoMap,
       porMes,
     };
   }, [filteredData]);
