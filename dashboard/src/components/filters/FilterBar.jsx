@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, X, Search } from 'lucide-react';
+import { ChevronDown, Check, X, Search, Eye, EyeOff } from 'lucide-react';
 import { classifyFluxo } from '../../utils/classifyFluxo.js';
 import { formatMesLabel } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
@@ -81,7 +81,7 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   );
 }
 
-export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, search, onSearchChange }) {
+export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
   const options = useMemo(() => {
     const anos      = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
     const meses     = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
@@ -176,6 +176,11 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
           selected={filters.anos}
           onToggle={(v) => toggleFilter('anos', v)}
         />
+
+        <button className="filter-visibility-btn" onClick={onToggleCharts}>
+          {chartsCollapsed ? <Eye size={12} /> : <EyeOff size={12} />}
+          {chartsCollapsed ? 'Exibir Informações' : 'Ocultar Informações'}
+        </button>
 
         {hasAnyFilter && (
           <button

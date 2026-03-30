@@ -33,7 +33,7 @@ function donutPath(cx, cy, outerR, innerR, startAngle, endAngle) {
   ].join(' ');
 }
 
-export default function DonutChart({ normal = 0, er = 0 }) {
+export default function DonutChart({ normal = 0, er = 0, forceCollapsed }) {
   const [hovered, setHovered] = useState(null);
   const total = normal + er;
 
@@ -63,7 +63,7 @@ export default function DonutChart({ normal = 0, er = 0 }) {
         })();
 
   return (
-    <ChartCard title="Distribuição de Fluxo" icon={PieChart}>
+    <ChartCard title="Distribuição de Fluxo" icon={PieChart} forceCollapsed={forceCollapsed}>
       <div className="donut-layout">
         <div className="donut-svg-wrap">
           <svg width="100%" viewBox="0 0 180 180" aria-label="Donut chart — Distribuição de Fluxo">

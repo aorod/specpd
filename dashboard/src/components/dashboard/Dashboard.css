@@ -122,12 +122,32 @@
   height: 6px;
   border-radius: 50%;
   background: #22c55e;
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse-green 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+.dashboard-badge-dot.is-loading {
+  background: #eab308;
+  animation: pulse-yellow 2s ease-in-out infinite;
+}
+
+.dashboard-badge-dot.is-error {
+  background: #ef4444;
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
+@keyframes pulse-yellow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.6); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(234, 179, 8, 0); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
 }
 
 /* Loading / error states */
@@ -147,10 +167,6 @@
   border-color: var(--color-er);
   color: var(--color-er);
   background: var(--color-er-bg);
-}
-
-.dashboard-badge-dot.is-loading {
-  background: var(--color-info);
 }
 
 @keyframes spin {

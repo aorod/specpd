@@ -14,7 +14,7 @@ const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
 const VISIBLE_ROWS = 6;
 const SCROLL_H = VISIBLE_ROWS * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-export default function VerticalBarChart({ data }) {
+export default function VerticalBarChart({ data, forceCollapsed }) {
   const [tooltip, setTooltip] = useState(null);
   const [asc, setAsc] = useState(false);
 
@@ -36,7 +36,7 @@ export default function VerticalBarChart({ data }) {
   );
 
   return (
-    <ChartCard title="Designer" icon={Users} actions={sortButton}>
+    <ChartCard title="Designer" icon={Users} actions={sortButton} forceCollapsed={forceCollapsed}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Designer">
           <title>Designer</title>

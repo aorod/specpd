@@ -14,7 +14,7 @@ const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
 const VISIBLE_ROWS = 6;
 const SCROLL_H = VISIBLE_ROWS * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-export default function RequisitoChart({ data }) {
+export default function RequisitoChart({ data, forceCollapsed }) {
   const [tooltip, setTooltip] = useState(null);
   const [asc, setAsc] = useState(false);
 
@@ -38,7 +38,7 @@ export default function RequisitoChart({ data }) {
   );
 
   return (
-    <ChartCard title="Requisito" icon={Users} actions={sortButton}>
+    <ChartCard title="Requisito" icon={Users} actions={sortButton} forceCollapsed={forceCollapsed}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Requisito">
           <title>Requisito</title>

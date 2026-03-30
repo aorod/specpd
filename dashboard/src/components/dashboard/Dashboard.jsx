@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [theme, setTheme] = useState('dark');
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
+  const [chartsCollapsed, setChartsCollapsed] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -77,8 +78,8 @@ export default function Dashboard() {
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <div className="dashboard-badge">
-              <span className={`dashboard-badge-dot${loading ? ' is-loading' : ''}`} />
-              {loading ? 'Carregando...' : error ? 'Erro na carga' : `${rawData.length} UCs`}
+              <span className={`dashboard-badge-dot${loading ? ' is-loading' : error ? ' is-error' : ''}`} />
+              {loading ? 'Carregando...' : error ? 'Offline' : 'Online'}
             </div>
           </div>
         </header>
@@ -94,6 +95,8 @@ export default function Dashboard() {
               open={sidebarOpen}
               search={search}
               onSearchChange={setSearch}
+              chartsCollapsed={chartsCollapsed}
+              onToggleCharts={() => setChartsCollapsed((v) => !v)}
             />
             {pinnedDefs.length > 0 && (
               <div className="pinned-cards-row">
@@ -152,13 +155,13 @@ export default function Dashboard() {
           )}
 
           <section className="charts-grid" aria-label="Gráficos">
-            <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} />
-            <HorizontalBarChart data={metrics.porProduto} />
+            <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} forceCollapsed={chartsCollapsed} />
+            <HorizontalBarChart data={metrics.porProduto} forceCollapsed={chartsCollapsed} />
             <div style={{ gridColumn: '1 / -1' }}>
-              <LineChart data={metrics.porMes} anos={filters.anos} />
+              <LineChart data={metrics.porMes} anos={filters.anos} forceCollapsed={chartsCollapsed} />
             </div>
-            <VerticalBarChart data={metrics.porDesigner} />
-            <RequisitoChart data={metrics.porRequisito} />
+            <VerticalBarChart data={metrics.porDesigner} forceCollapsed={chartsCollapsed} />
+            <RequisitoChart data={metrics.porRequisito} forceCollapsed={chartsCollapsed} />
           </section>
 
           <section aria-label="Tabela de UCs">

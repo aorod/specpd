@@ -25,7 +25,7 @@ const mesAbbrFromKey = (mesKey) => {
   return MES_ABBR[parseInt(m, 10) - 1] ?? mesKey;
 };
 
-export default function LineChart({ data, anos = [] }) {
+export default function LineChart({ data, anos = [], forceCollapsed }) {
   const [tooltip, setTooltip] = useState(null);
 
   // Filtra entradas com chave mal-formada ("YYYY-MM")
@@ -71,7 +71,7 @@ export default function LineChart({ data, anos = [] }) {
     const xPos = (mi) => nm === 1 ? PAD.left + CHART_W / 2 : PAD.left + (mi / (nm - 1)) * CHART_W;
 
     return (
-      <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined}>
+      <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined} forceCollapsed={forceCollapsed}>
         <div className="chart-legend-row">
           {yearsInData.flatMap((year, i) => [
             <span key={`dot-${year}`} className="chart-legend-dot" style={{ background: YEAR_COLORS[i % YEAR_COLORS.length] }} />,
@@ -153,7 +153,7 @@ export default function LineChart({ data, anos = [] }) {
   const erPoints     = entries.map(([, v], i) => ({ x: xPos(i), y: yPos(v.fluxoER, maxVal) }));
 
   return (
-    <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined}>
+    <ChartCard title="Evolução por Mês" icon={TrendingUp} actions={displayYears ? <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{displayYears}</span> : undefined} forceCollapsed={forceCollapsed}>
       <div className="chart-legend-row">
         <span className="chart-legend-dot" style={{ background: 'var(--color-info)' }} />
         <span className="chart-legend-text">Total de UCs</span>

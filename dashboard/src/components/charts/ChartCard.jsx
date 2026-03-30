@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-export default function ChartCard({ title, icon: Icon, actions, children }) {
+export default function ChartCard({ title, icon: Icon, actions, children, forceCollapsed }) {
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (forceCollapsed !== undefined) setCollapsed(forceCollapsed);
+  }, [forceCollapsed]);
 
   return (
     <div className={`chart-card${collapsed ? ' is-collapsed' : ''}`}>

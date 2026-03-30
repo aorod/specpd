@@ -13,7 +13,7 @@ const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
 const VISIBLE_ROWS = 6;
 const SCROLL_H = VISIBLE_ROWS * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-export default function HorizontalBarChart({ data }) {
+export default function HorizontalBarChart({ data, forceCollapsed }) {
   const [tooltip, setTooltip] = useState(null);
   const [asc, setAsc] = useState(false);
 
@@ -35,7 +35,7 @@ export default function HorizontalBarChart({ data }) {
   );
 
   return (
-    <ChartCard title="Fluxo por Produto" icon={BarChart2} actions={sortButton}>
+    <ChartCard title="Fluxo por Produto" icon={BarChart2} actions={sortButton} forceCollapsed={forceCollapsed}>
       <div className="chart-legend-row">
         <span className="chart-legend-dot" style={{ background: 'var(--color-normal)' }} />
         <span className="chart-legend-text">Fluxo Normal</span>
