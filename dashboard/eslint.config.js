@@ -28,6 +28,7 @@ export default [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'no-console': 'warn',
+      'react/prop-types': 'off',
       'no-unused-vars': 'warn',
     },
   },
