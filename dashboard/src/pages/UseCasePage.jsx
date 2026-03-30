@@ -1,19 +1,19 @@
 import { useState, useMemo } from 'react';
 import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
-import { useUCData } from '../../hooks/useUCData.js';
-import { useFilters } from '../../hooks/useFilters.js';
-import { useUCMetrics } from '../../hooks/useUCMetrics.js';
-import MetricCard from '../cards/MetricCard.jsx';
-import FilterBar from '../filters/FilterBar.jsx';
-import DonutChart from '../charts/DonutChart.jsx';
-import HorizontalBarChart from '../charts/HorizontalBarChart.jsx';
-import VerticalBarChart from '../charts/VerticalBarChart.jsx';
-import RequisitoChart from '../charts/RequisitoChart.jsx';
-import LineChart from '../charts/LineChart.jsx';
-import UCTable from '../table/UCTable.jsx';
-import './Dashboard.css';
+import { useUCData } from '../hooks/useUCData.js';
+import { useFilters } from '../hooks/useFilters.js';
+import { useUCMetrics } from '../hooks/useUCMetrics.js';
+import MetricCard from '../components/cards/MetricCard.jsx';
+import FilterBar from '../components/filters/FilterBar.jsx';
+import DonutChart from '../components/charts/DonutChart.jsx';
+import HorizontalBarChart from '../components/charts/HorizontalBarChart.jsx';
+import VerticalBarChart from '../components/charts/VerticalBarChart.jsx';
+import RequisitoChart from '../components/charts/RequisitoChart.jsx';
+import LineChart from '../components/charts/LineChart.jsx';
+import UCTable from '../components/table/UCTable.jsx';
+import './UseCasePage.css';
 
-export default function Dashboard({ theme, setTheme }) {
+export default function UseCasePage({ theme, setTheme }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const [sidebarOpen, setSidebarOpen] = useState(false);

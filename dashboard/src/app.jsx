@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './style.css';
 import Sidebar from './components/sidebar/Sidebar.jsx';
-import Dashboard from './components/dashboard/Dashboard.jsx';
+import UseCasePage from './pages/UseCasePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 
 export default function App() {
@@ -22,7 +22,7 @@ export default function App() {
         onToggle={() => setSidebarExpanded((v) => !v)}
       />
       <div className="app-content">
-        {activePage === 'casos-de-uso' && <Dashboard theme={theme} setTheme={setTheme} />}
+        {activePage === 'casos-de-uso' && <UseCasePage theme={theme} setTheme={setTheme} />}
         {activePage === 'analytics'    && <AnalyticsPage theme={theme} setTheme={setTheme} />}
       </div>
     </div>
