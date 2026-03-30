@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
 import { useUCData } from '../../hooks/useUCData.js';
 import { useFilters } from '../../hooks/useFilters.js';
@@ -13,18 +13,13 @@ import LineChart from '../charts/LineChart.jsx';
 import UCTable from '../table/UCTable.jsx';
 import './Dashboard.css';
 
-export default function Dashboard() {
+export default function Dashboard({ theme, setTheme }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState('dark');
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
   const [chartsCollapsed, setChartsCollapsed] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
 
   const displayData = useMemo(() => {
     if (!search.trim()) return filteredData;
@@ -52,10 +47,22 @@ export default function Dashboard() {
       <div className="dashboard-sticky-top">
         <header className="dashboard-header">
           <div>
-            <h1 className="dashboard-title">E&D Dashboard</h1>
+            <h1 className="dashboard-title">Casos de Uso</h1>
             <p className="dashboard-subtitle">Acompanhamento de Casos de Uso</p>
           </div>
           <div className="dashboard-header-right">
+            {!loading && (
+              <button
+                className={`refresh-btn${loading ? ' is-loading' : ''}`}
+                onClick={retry}
+                disabled={loading}
+                aria-label="Atualizar dados"
+                title="Buscar dados atualizados do Azure DevOps"
+              >
+                <RefreshCw size={13} className={loading ? 'spin' : ''} />
+                Atualizar
+              </button>
+            )}
             {!loading && !error && (
               <button
                 className={`filters-toggle-btn${sidebarOpen ? ' is-active' : ''}`}
