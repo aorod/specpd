@@ -5,9 +5,9 @@ import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
 const LABEL_W = 148;
-const BAR_AREA = 240;
-const ROW_H = 28;
-const ROW_GAP = 10;
+const BAR_AREA = 220;
+const ROW_H = 20;
+const ROW_GAP = 8;
 const PAD = 8;
 const COUNT_W = 32;
 const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
@@ -53,7 +53,7 @@ export default function RequisitoChart({ data, forceCollapsed }) {
                   x={LABEL_W}
                   y={y + ROW_H / 2 + 4}
                   textAnchor="end"
-                  fontSize={11}
+                  fontSize={9.5}
                   fill="var(--color-text-secondary)"
                 >
                   {(() => { const n = aliasName(requisito); return n.length > 19 ? n.slice(0, 19) + '…' : n; })()}
@@ -78,7 +78,7 @@ export default function RequisitoChart({ data, forceCollapsed }) {
                 <text
                   x={barX + barW + 6}
                   y={y + ROW_H / 2 + 4}
-                  fontSize={11}
+                  fontSize={9.5}
                   fill="var(--color-text-muted)"
                   fontWeight="600"
                 >

@@ -81,7 +81,7 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   );
 }
 
-export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, open, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
+export default function FilterBar({ data, filters, toggleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
   const options = useMemo(() => {
     const anos      = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
     const meses     = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
@@ -97,8 +97,6 @@ export default function FilterBar({ data, filters, toggleFilter, clearFilters, i
     const fluxos    = [...new Set(filterExcluding(data, filters, 'fluxos').map((d) => classifyFluxo(d)))].sort();
     return { anos, meses, states, subStatuses, produtos, designers, requisitos, fluxos };
   }, [data, filters]);
-
-  if (!open) return null;
 
   const hasAnyFilter = isActive || !!search.trim();
 

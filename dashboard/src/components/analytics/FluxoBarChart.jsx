@@ -4,9 +4,9 @@ import ChartCard from '../charts/ChartCard.jsx';
 import '../charts/Charts.css';
 
 const LABEL_W = 148;
-const BAR_AREA = 240;
-const ROW_H = 28;
-const ROW_GAP = 10;
+const BAR_AREA = 220;
+const ROW_H = 20;
+const ROW_GAP = 8;
 const PAD = 8;
 const COUNT_W = 32;
 const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
@@ -57,7 +57,7 @@ export default function FluxoBarChart({ title, icon, data, formatLabel, forceCol
 
             return (
               <g key={key}>
-                <text x={LABEL_W} y={y + ROW_H / 2 + 4} textAnchor="end" fontSize={11} fill="var(--color-text-secondary)">
+                <text x={LABEL_W} y={y + ROW_H / 2 + 4} textAnchor="end" fontSize={9.5} fill="var(--color-text-secondary)">
                   {displayLabel}
                 </text>
                 {normalW > 0 && (
@@ -82,7 +82,7 @@ export default function FluxoBarChart({ title, icon, data, formatLabel, forceCol
                     onMouseLeave={() => setTooltip(null)}
                   />
                 )}
-                <text x={barX + normalW + erW + 6} y={y + ROW_H / 2 + 4} fontSize={11} fill="var(--color-text-muted)" fontWeight="600">
+                <text x={barX + normalW + erW + 6} y={y + ROW_H / 2 + 4} fontSize={9.5} fill="var(--color-text-muted)" fontWeight="600">
                   {total}
                 </text>
               </g>

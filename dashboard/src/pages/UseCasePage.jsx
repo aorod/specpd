@@ -16,7 +16,7 @@ import './UseCasePage.css';
 export default function UseCasePage({ theme, setTheme }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
   const [chartsCollapsed, setChartsCollapsed] = useState(false);
@@ -65,9 +65,9 @@ export default function UseCasePage({ theme, setTheme }) {
             )}
             {!loading && !error && (
               <button
-                className={`filters-toggle-btn${sidebarOpen ? ' is-active' : ''}`}
-                onClick={() => setSidebarOpen((o) => !o)}
-                aria-pressed={sidebarOpen}
+                className={`filters-toggle-btn${filtersOpen ? ' is-active' : ''}`}
+                onClick={() => setFiltersOpen((o) => !o)}
+                aria-pressed={filtersOpen}
               >
                 <SlidersHorizontal size={14} />
                 Filtros
@@ -93,18 +93,19 @@ export default function UseCasePage({ theme, setTheme }) {
 
         {!loading && !error && (
           <>
-            <FilterBar
-              data={rawData}
-              filters={filters}
-              toggleFilter={toggleFilter}
-              clearFilters={clearFilters}
-              isActive={isActive}
-              open={sidebarOpen}
-              search={search}
-              onSearchChange={setSearch}
-              chartsCollapsed={chartsCollapsed}
-              onToggleCharts={() => setChartsCollapsed((v) => !v)}
-            />
+            {filtersOpen && (
+              <FilterBar
+                data={rawData}
+                filters={filters}
+                toggleFilter={toggleFilter}
+                clearFilters={clearFilters}
+                isActive={isActive}
+                search={search}
+                onSearchChange={setSearch}
+                chartsCollapsed={chartsCollapsed}
+                onToggleCharts={() => setChartsCollapsed((v) => !v)}
+              />
+            )}
             {pinnedDefs.length > 0 && (
               <div className="pinned-cards-row">
                 {pinnedDefs.map((card) => (
@@ -165,7 +166,7 @@ export default function UseCasePage({ theme, setTheme }) {
             <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} forceCollapsed={chartsCollapsed} />
             <HorizontalBarChart data={metrics.porProduto} forceCollapsed={chartsCollapsed} />
             <div style={{ gridColumn: '1 / -1' }}>
-              <LineChart data={metrics.porMes} anos={filters.anos} forceCollapsed={chartsCollapsed} />
+              <LineChart data={metrics.porMes} anos={filters.anos} dotRadius={2.5} forceCollapsed={chartsCollapsed} />
             </div>
             <VerticalBarChart data={metrics.porDesigner} forceCollapsed={chartsCollapsed} />
             <RequisitoChart data={metrics.porRequisito} forceCollapsed={chartsCollapsed} />
