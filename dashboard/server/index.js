@@ -20,6 +20,7 @@ const WI_SELECT = [
   'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
   'Custom_SubStatus', 'Custom_RequisitoSK', 'Custom_DesignerSK',
   'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
+  'Custom_Atividade', 'Effort',
   MES_FIELD, 'AssignedToUserSK',
 ].join(',');
 
@@ -32,7 +33,7 @@ function transformItem(item, userMap) {
   const mesRaw = item[MES_FIELD] || '';
   const monthPart = mesRaw ? String(mesRaw).split(' - ')[0].padStart(2, '0') : '';
   return {
-    id: `UC-${item.WorkItemId}`,
+    id: `${item.WorkItemType === 'Timesheet' ? 'TS' : 'UC'}-${item.WorkItemId}`,
     workItemType: item.WorkItemType,
     title: item.Title || '',
     assignedTo: userMap.get(item.AssignedToUserSK) || '',
@@ -44,6 +45,9 @@ function transformItem(item, userMap) {
     designer: userMap.get(item.Custom_DesignerSK) || '',
     produto: item.Custom_ProdutoControladoria || '',
     tags: item.TagNames || '',
+    atividade: item.Custom_Atividade || '',
+    equipe: item.Custom_Equipe || '',
+    effort: item.Effort ?? null,
   };
 }
 
@@ -80,14 +84,43 @@ app.get('/api/analytics', async (_req, res) => {
     const usersRaw = await fetchAllPages(usersUrl, headers);
     const userMap = new Map(usersRaw.map((u) => [u.UserSK, u.UserName]));
 
-    // 2. Busca WorkItems do tipo Caso de Uso
-    const filter = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
-    const wiUrl = `${BASE_URL}/WorkItems?$filter=${filter}&$select=${WI_SELECT}`;
-    const wiRaw = await fetchAllPages(wiUrl, headers);
+    // 2. Busca WorkItems dos dois tipos em paralelo
+    const filterUC = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
+    const filterTS = encodeURIComponent("WorkItemType eq 'Timesheet'");
 
-    // 3. Transforma e retorna
-    const result = wiRaw.map((item) => transformItem(item, userMap));
+    const [ucRaw, tsRaw] = await Promise.all([
+      fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterUC}&$select=${WI_SELECT}`, headers),
+      fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
+    ]);
+
+    // 3. Transforma e retorna os dois tipos juntos
+    const result = [...ucRaw, ...tsRaw].map((item) => transformItem(item, userMap));
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint de diagnóstico: inspeciona os campos brutos do Timesheet
+app.get('/api/debug/timesheet-fields', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = {
+    Authorization: authHeader(token),
+    Accept: 'application/json',
+  };
+
+  try {
+    const filter = encodeURIComponent("WorkItemType eq 'Timesheet'");
+    const url = `${BASE_URL}/WorkItems?$filter=${filter}&$top=1`;
+    const raw = await fetchAllPages(url, headers);
+
+    if (!raw.length) return res.json({ message: 'Nenhum Timesheet encontrado', fields: [] });
+
+    const sample = raw[0];
+    const fields = Object.keys(sample).map((key) => ({ field: key, value: sample[key] }));
+    res.json({ totalFound: raw.length, sampleFields: fields });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

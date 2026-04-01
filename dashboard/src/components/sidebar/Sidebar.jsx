@@ -1,9 +1,10 @@
-import { Menu, BookOpen, BarChart3 } from 'lucide-react';
+import { Menu, BookOpen, BarChart3, Clock } from 'lucide-react';
 import './Sidebar.css';
 
 const NAV_ITEMS = [
   { id: 'casos-de-uso', label: 'Casos de Uso', icon: BookOpen },
   { id: 'analytics',    label: 'Analytics',    icon: BarChart3 },
+  { id: 'timesheet',    label: 'Timesheet',    icon: Clock     },
 ];
 
 export default function Sidebar({ activePage, onNavigate, expanded, onToggle }) {

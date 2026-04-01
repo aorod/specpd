@@ -3,6 +3,7 @@ import './style.css';
 import Sidebar from './components/sidebar/Sidebar.jsx';
 import UseCasePage from './pages/UseCasePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
+import TimesheetPage from './pages/TimesheetPage.jsx';
 
 export default function App() {
   const [activePage, setActivePage] = useState('casos-de-uso');
@@ -24,6 +25,7 @@ export default function App() {
       <div className="app-content">
         {activePage === 'casos-de-uso' && <UseCasePage theme={theme} setTheme={setTheme} />}
         {activePage === 'analytics'    && <AnalyticsPage theme={theme} setTheme={setTheme} />}
+        {activePage === 'timesheet'    && <TimesheetPage theme={theme} setTheme={setTheme} />}
       </div>
     </div>
   );

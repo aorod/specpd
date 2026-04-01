@@ -14,7 +14,7 @@ const SVG_W = LABEL_W + BAR_AREA + COUNT_W + PAD * 2;
 const VISIBLE_ROWS = 6;
 const SCROLL_H = VISIBLE_ROWS * (ROW_H + ROW_GAP) + PAD * 2 - ROW_GAP;
 
-export default function VerticalBarChart({ data, forceCollapsed }) {
+export default function VerticalBarChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total de demandas' }) {
   const [tooltip, setTooltip] = useState(null);
   const [asc, setAsc] = useState(false);
 
@@ -36,7 +36,7 @@ export default function VerticalBarChart({ data, forceCollapsed }) {
   );
 
   return (
-    <ChartCard title="Designer" icon={Users} actions={sortButton} forceCollapsed={forceCollapsed}>
+    <ChartCard title={title} icon={Users} actions={sortButton} forceCollapsed={forceCollapsed}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Designer">
           <title>Designer</title>
@@ -90,7 +90,7 @@ export default function VerticalBarChart({ data, forceCollapsed }) {
         {tooltip && (
           <div className="chart-tooltip">
             <span className="chart-tooltip-label">{aliasName(tooltip.designer)}</span>
-            <span>Total de demandas: <strong>{tooltip.total}</strong></span>
+            <span>{tooltipLabel}: <strong>{tooltip.total}</strong></span>
           </div>
         )}
       </div>

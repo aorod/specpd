@@ -31,6 +31,11 @@
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
+.metric-card--muted:hover {
+  border-color: #6b7280;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -64,6 +69,11 @@
 .metric-card--warning .metric-card-icon {
   background: rgba(251, 191, 36, 0.12);
   color: #fbbf24;
+}
+
+.metric-card--muted .metric-card-icon {
+  background: rgba(107, 114, 128, 0.12);
+  color: #9ca3af;
 }
 
 .metric-card-body {
