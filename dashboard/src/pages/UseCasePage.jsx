@@ -13,7 +13,7 @@ import LineChart from '../components/charts/LineChart.jsx';
 import UCTable from '../components/table/UCTable.jsx';
 import './UseCasePage.css';
 
-export default function UseCasePage({ theme, setTheme }) {
+export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -44,6 +44,17 @@ export default function UseCasePage({ theme, setTheme }) {
   return (
     <div className="dashboard">
       <div className="dashboard-sticky-top">
+        <button
+          className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
+          onClick={onMenuToggle}
+          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          <span className="hamburger">
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </span>
+        </button>
         <header className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Casos de Uso</h1>

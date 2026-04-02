@@ -30,3 +30,10 @@ export function aliasName(name) {
   if (!name) return name;
   return NAME_ALIASES[name.trim()] ?? name;
 }
+
+/**
+ * Lista de analistas: { fullName, alias } ordenada pelo alias.
+ */
+export const ANALISTAS = Object.entries(NAME_ALIASES)
+  .map(([fullName, alias]) => ({ fullName, alias }))
+  .sort((a, b) => a.alias.localeCompare(b.alias));

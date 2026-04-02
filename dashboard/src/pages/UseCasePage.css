@@ -20,12 +20,20 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Botão menu posicionado absolutamente, alinhado ao título */
+.dashboard-sticky-top > .app-menu-btn {
+  position: absolute;
+  top: 24px;
+  left: 0;
+}
+
 .dashboard-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding-left: 48px;
 }
 
 .dashboard-title {

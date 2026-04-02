@@ -11,7 +11,7 @@ import RequisitoChart from '../components/charts/RequisitoChart.jsx';
 import TimesheetTable from '../components/table/TimesheetTable.jsx';
 import './UseCasePage.css';
 
-export default function TimesheetPage({ theme, setTheme }) {
+export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle }) {
   const { data: rawData, loading, error, retry } = useTimesheetData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useTimesheetFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -59,6 +59,17 @@ export default function TimesheetPage({ theme, setTheme }) {
   return (
     <div className="dashboard">
       <div className="dashboard-sticky-top">
+        <button
+          className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
+          onClick={onMenuToggle}
+          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          <span className="hamburger">
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </span>
+        </button>
         <header className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Timesheet</h1>

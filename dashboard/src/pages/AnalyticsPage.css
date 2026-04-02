@@ -17,12 +17,19 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.analytics-sticky-top > .app-menu-btn {
+  position: absolute;
+  top: 24px;
+  left: 0;
+}
+
 .analytics-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding-left: 48px;
 }
 
 .analytics-title {

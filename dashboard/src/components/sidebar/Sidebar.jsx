@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, BookOpen, BarChart3, Clock, CalendarRange, Umbrella, House, ChevronRight, LayoutDashboard, Users } from 'lucide-react';
+import { BookOpen, BarChart3, Clock, CalendarRange, Umbrella, House, ChevronDown, LayoutDashboard, Users } from 'lucide-react';
 import './Sidebar.css';
 
 const MODULES = [
@@ -24,16 +24,16 @@ const MODULES = [
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate, expanded, onToggle }) {
+export default function Sidebar({ activePage, onNavigate, open, onClose }) {
   const [openModules, setOpenModules] = useState({ dashboard: true, colaborador: false });
 
   function toggleModule(id) {
     setOpenModules(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
-  // Auto-open module that contains the active page
   function handleNavigate(pageId) {
     onNavigate(pageId);
+    onClose();
     MODULES.forEach(mod => {
       if (mod.items.some(item => item.id === pageId)) {
         setOpenModules(prev => ({ ...prev, [mod.id]: true }));
@@ -42,58 +42,70 @@ export default function Sidebar({ activePage, onNavigate, expanded, onToggle }) 
   }
 
   return (
-    <aside className={`sidebar${expanded ? ' is-expanded' : ''}`}>
-      <button className="sidebar-toggle" onClick={onToggle} aria-label="Menu">
-        <Menu size={18} />
-      </button>
+    <>
+      {/* Backdrop */}
+      <div
+        className={`float-backdrop${open ? ' is-visible' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <nav className="sidebar-nav">
-        {MODULES.map(({ id, label, icon: ModIcon, items }) => {
-          const isOpen = openModules[id];
-          const hasActive = items.some(item => item.id === activePage);
+      {/* Floating panel */}
+      <aside className={`float-menu${open ? ' is-open' : ''}`} aria-label="Menu de navegação">
 
-          return (
-            <div key={id} className="sidebar-module">
-              {/* Module header — only meaningful when expanded */}
-              <button
-                className={`sidebar-module-header${isOpen ? ' is-open' : ''}${hasActive && !isOpen ? ' has-active' : ''}`}
-                onClick={() => expanded ? toggleModule(id) : undefined}
-                title={!expanded ? label : undefined}
-              >
-                <ModIcon size={15} className="sidebar-module-icon" />
-                <span className="sidebar-module-label">{label}</span>
-                <ChevronRight size={12} className="sidebar-module-chevron" />
-              </button>
+        {/* Início — topo */}
+        <div className="float-top">
+          <button
+            className="float-footer-btn"
+            onClick={() => { onNavigate('home'); onClose(); }}
+          >
+            <House size={15} />
+            <span>Início</span>
+          </button>
+        </div>
 
-              {/* Sub-items: always visible when collapsed; follow accordion when expanded */}
-              <div className={`sidebar-module-items${isOpen || !expanded ? ' is-open' : ''}`}>
-                {items.map(({ id: itemId, label: itemLabel, icon: Icon }) => (
-                  <button
-                    key={itemId}
-                    className={`sidebar-item${activePage === itemId ? ' is-active' : ''}`}
-                    onClick={() => handleNavigate(itemId)}
-                    title={!expanded ? itemLabel : undefined}
-                  >
-                    <Icon size={16} className="sidebar-item-icon" />
-                    <span className="sidebar-item-label">{itemLabel}</span>
-                  </button>
-                ))}
+        {/* Stacked modules */}
+        <nav className="float-nav">
+          {MODULES.map(({ id, label, icon: ModIcon, items }) => {
+            const isOpen = openModules[id];
+
+            return (
+              <div key={id} className="float-module">
+                {/* Module header */}
+                <button
+                  className={`float-module-header${isOpen ? ' is-open' : ''}`}
+                  onClick={() => toggleModule(id)}
+                >
+                  <div className="float-module-icon-wrap">
+                    <ModIcon size={15} />
+                  </div>
+                  <span className="float-module-label">{label}</span>
+                  <ChevronDown size={14} className="float-module-chevron" />
+                </button>
+
+                {/* Sub-items */}
+                <div className={`float-module-items${isOpen ? ' is-open' : ''}`}>
+                  {items.map(({ id: itemId, label: itemLabel, icon: Icon }) => (
+                    <button
+                      key={itemId}
+                      className={`float-item${activePage === itemId ? ' is-active' : ''}`}
+                      onClick={() => handleNavigate(itemId)}
+                    >
+                      <div className="float-item-icon-wrap">
+                        <Icon size={15} />
+                      </div>
+                      <span className="float-item-label">{itemLabel}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </nav>
+            );
+          })}
+        </nav>
 
-      <div className="sidebar-footer">
-        <button
-          className="sidebar-item"
-          onClick={() => onNavigate('home')}
-          title={!expanded ? 'Início' : undefined}
-        >
-          <House size={17} className="sidebar-item-icon" />
-          <span className="sidebar-item-label">Início</span>
-        </button>
-      </div>
-    </aside>
+        <div className="float-footer" />
+
+      </aside>
+    </>
   );
 }

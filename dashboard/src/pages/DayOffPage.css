@@ -1,0 +1,350 @@
+/* ─── Page layout ────────────────────────────────────────────── */
+.dayoff-page {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 40px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Sticky top ─────────────────────────────────────────────── */
+.dayoff-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--color-bg);
+  padding: 24px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dayoff-sticky-top > .app-menu-btn {
+  position: absolute;
+  top: 24px;
+  left: 0;
+}
+
+.dayoff-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-left: 48px;
+}
+
+.dayoff-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.dayoff-subtitle {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.dayoff-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── Form card ──────────────────────────────────────────────── */
+.dayoff-form-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+}
+
+.dayoff-form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ─── Field ──────────────────────────────────────────────────── */
+.dayoff-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.dayoff-field--equipe {
+  flex: 0 0 120px;
+  min-width: 100px;
+}
+
+.dayoff-field--date {
+  flex: 0 0 150px;
+  min-width: 130px;
+}
+
+.dayoff-field--btn {
+  flex: 0 0 auto;
+  min-width: unset;
+}
+
+.dayoff-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ─── Select ─────────────────────────────────────────────────── */
+.dayoff-select {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 150ms, color 150ms;
+  width: 100%;
+}
+
+.dayoff-select:focus {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+/* ─── Date input ─────────────────────────────────────────────── */
+.dayoff-input {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 150ms, color 150ms;
+  width: 100%;
+  color-scheme: dark;
+}
+
+.dayoff-input:focus {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .dayoff-input {
+  color-scheme: light;
+}
+
+/* ─── Autofill (Equipe) ──────────────────────────────────────── */
+.dayoff-autofill {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dayoff-autofill.has-value {
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  background: var(--color-surface-2);
+}
+
+/* ─── Incluir button ─────────────────────────────────────────── */
+.dayoff-incluir-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: not-allowed;
+  transition: background 150ms, color 150ms, border-color 150ms;
+  white-space: nowrap;
+}
+
+.dayoff-incluir-btn.is-ready {
+  background: var(--color-accent-bg);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.dayoff-incluir-btn.is-ready:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* ─── Grid card ──────────────────────────────────────────────── */
+.dayoff-grid-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dayoff-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dayoff-grid-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.dayoff-grid-count {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* ─── Table ──────────────────────────────────────────────────── */
+.dayoff-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dayoff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.dayoff-table thead tr {
+  background: var(--color-surface-2);
+}
+
+.dayoff-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dayoff-table td {
+  padding: 12px 16px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.dayoff-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dayoff-table tbody tr {
+  transition: background 150ms;
+}
+
+.dayoff-table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.dayoff-td--analista {
+  color: var(--color-text-primary) !important;
+  font-weight: 500;
+}
+
+/* ─── Empty state ────────────────────────────────────────────── */
+.dayoff-empty {
+  text-align: center;
+  padding: 40px 16px !important;
+  color: var(--color-text-muted) !important;
+  font-size: 0.82rem;
+}
+
+/* ─── Badge ──────────────────────────────────────────────────── */
+.dayoff-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dayoff-badge--atestado {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.dayoff-badge--dayoff {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+/* ─── Remove button ──────────────────────────────────────────── */
+.dayoff-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.dayoff-remove-btn:hover {
+  background: var(--color-er-bg);
+  color: var(--color-er);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dayoff-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dayoff-field--equipe,
+  .dayoff-field--date,
+  .dayoff-field--btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .dayoff-page {
+    padding: 0 16px 48px;
+  }
+}

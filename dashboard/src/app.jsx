@@ -10,12 +10,14 @@ import DayOffPage from './pages/DayOffPage.jsx';
 
 export default function App() {
   const [activePage, setActivePage] = useState('home');
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  const menuProps = { menuOpen: flyoutOpen, onMenuToggle: () => setFlyoutOpen(v => !v) };
 
   if (activePage === 'home') {
     return <HomePage onNavigate={setActivePage} />;
@@ -26,15 +28,16 @@ export default function App() {
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
-        expanded={sidebarExpanded}
-        onToggle={() => setSidebarExpanded((v) => !v)}
+        open={flyoutOpen}
+        onClose={() => setFlyoutOpen(false)}
       />
+
       <div className="app-content">
-        {activePage === 'casos-de-uso' && <UseCasePage theme={theme} setTheme={setTheme} />}
-        {activePage === 'analytics'    && <AnalyticsPage theme={theme} setTheme={setTheme} />}
-        {activePage === 'timesheet'    && <TimesheetPage theme={theme} setTheme={setTheme} />}
-        {activePage === 'ferias'       && <FeriasPage theme={theme} setTheme={setTheme} />}
-        {activePage === 'dayoff'       && <DayOffPage theme={theme} setTheme={setTheme} />}
+        {activePage === 'casos-de-uso' && <UseCasePage theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'analytics'    && <AnalyticsPage theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'timesheet'    && <TimesheetPage theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'ferias'       && <FeriasPage theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'dayoff'       && <DayOffPage theme={theme} setTheme={setTheme} {...menuProps} />}
       </div>
     </div>
   );

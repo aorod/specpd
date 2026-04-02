@@ -95,6 +95,78 @@ button {
   overflow-x: clip;
 }
 
+/* ─── Hamburger inline no header ─────────────────────────────── */
+.app-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.app-menu-btn:hover,
+.app-menu-btn.is-open {
+  background: var(--color-surface-2);
+}
+
+
+/* Hamburger icon */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 14px;
+  position: relative;
+}
+
+.hamburger-line {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: var(--color-text-secondary);
+  border-radius: 2px;
+  position: absolute;
+  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity   200ms ease,
+              top       260ms cubic-bezier(0.4, 0, 0.2, 1),
+              background 150ms;
+}
+
+.app-menu-btn:hover .hamburger-line {
+  background: var(--color-text-primary);
+}
+
+/* resting positions */
+.hamburger-line:nth-child(1) { top: 0; }
+.hamburger-line:nth-child(2) { top: 50%; transform: translateY(-50%); }
+.hamburger-line:nth-child(3) { top: 100%; transform: translateY(-100%); }
+
+/* open state → X */
+.app-menu-btn.is-open .hamburger-line:nth-child(1) {
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  background: var(--color-text-primary);
+}
+
+.app-menu-btn.is-open .hamburger-line:nth-child(2) {
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+}
+
+.app-menu-btn.is-open .hamburger-line:nth-child(3) {
+  top: 50%;
+  transform: translateY(-50%) rotate(-45deg);
+  background: var(--color-text-primary);
+}
+
 /* ─── Scrollbar (dark theme) ──────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-bg); }

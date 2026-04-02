@@ -24,7 +24,7 @@ const RECOMENDACOES = [
   { priority: 'baixa', label: 'Baixa', acao: 'Criar dashboard de acompanhamento semanal',            produto: 'GR Vector, Vector Pay',  impacto: 'Visibilidade contínua' },
 ];
 
-export default function AnalyticsPage({ theme, setTheme }) {
+export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const metrics = useAnalyticsMetrics(rawData);
   const [chartsCollapsed] = useState(false);
@@ -102,6 +102,17 @@ export default function AnalyticsPage({ theme, setTheme }) {
   return (
     <div className="analytics-page">
       <div className="analytics-sticky-top">
+        <button
+          className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
+          onClick={onMenuToggle}
+          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          <span className="hamburger">
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </span>
+        </button>
         <header className="analytics-header">
           <div>
             <h1 className="analytics-title">Analytics</h1>
