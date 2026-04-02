@@ -12,6 +12,7 @@ import { aliasName } from '../utils/nameAliases.js';
 import MetricCard from '../components/cards/MetricCard.jsx';
 import FluxoBarChart from '../components/analytics/FluxoBarChart.jsx';
 import LineChart from '../components/charts/LineChart.jsx';
+import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import './AnalyticsPage.css';
 
 const MES_ABBR = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -24,7 +25,7 @@ const RECOMENDACOES = [
   { priority: 'baixa', label: 'Baixa', acao: 'Criar dashboard de acompanhamento semanal',            produto: 'GR Vector, Vector Pay',  impacto: 'Visibilidade contínua' },
 ];
 
-export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle }) {
+export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const metrics = useAnalyticsMetrics(rawData);
   const [chartsCollapsed] = useState(false);
@@ -137,6 +138,7 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle 
               <span className={`dashboard-badge-dot${loading ? ' is-loading' : error ? ' is-error' : ''}`} />
               {loading ? 'Carregando...' : error ? 'Offline' : 'Online'}
             </div>
+            <ProfileMenu onNavigate={onNavigate} />
           </div>
         </header>
 

@@ -82,8 +82,9 @@
 }
 
 .dayoff-field--date {
-  flex: 0 0 150px;
-  min-width: 130px;
+  flex: 0 0 160px;
+  min-width: 140px;
+  overflow: visible;
 }
 
 .dayoff-field--btn {
@@ -121,30 +122,6 @@
   color: var(--color-text-primary);
 }
 
-/* ─── Date input ─────────────────────────────────────────────── */
-.dayoff-input {
-  height: 36px;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-2);
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-family: var(--font-sans);
-  outline: none;
-  transition: border-color 150ms, color 150ms;
-  width: 100%;
-  color-scheme: dark;
-}
-
-.dayoff-input:focus {
-  border-color: var(--color-accent);
-  color: var(--color-text-primary);
-}
-
-[data-theme="light"] .dayoff-input {
-  color-scheme: light;
-}
 
 /* ─── Autofill (Equipe) ──────────────────────────────────────── */
 .dayoff-autofill {
@@ -205,7 +182,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dayoff-grid-header {
@@ -232,6 +209,7 @@
 /* ─── Table ──────────────────────────────────────────────────── */
 .dayoff-table-wrapper {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -239,7 +217,17 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
+  table-layout: fixed;
 }
+
+/* Column widths */
+.dayoff-table colgroup col:nth-child(1) { width: auto; }       /* Analista — flex */
+.dayoff-table colgroup col:nth-child(2) { width: auto; }       /* Equipe */
+.dayoff-table colgroup col:nth-child(3) { width: auto; }      /* Data Início */
+.dayoff-table colgroup col:nth-child(4) { width: auto; }      /* Data Fim */
+.dayoff-table colgroup col:nth-child(5) { width: auto; }       /* Dias Úteis */
+.dayoff-table colgroup col:nth-child(6) { width: auto; }      /* Tipo de Abono */
+.dayoff-table colgroup col:nth-child(7) { width: auto; }       /* Ação */
 
 .dayoff-table thead tr {
   background: var(--color-surface-2);
@@ -255,6 +243,8 @@
   color: var(--color-text-muted);
   white-space: nowrap;
   border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dayoff-table td {
@@ -262,6 +252,9 @@
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dayoff-table tbody tr:last-child td {
@@ -279,6 +272,17 @@
 .dayoff-td--analista {
   color: var(--color-text-primary) !important;
   font-weight: 500;
+}
+
+.dayoff-td--dias {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--color-accent) !important;
+  text-align: center;
+}
+
+.dayoff-table th:nth-child(5) {
+  text-align: center;
 }
 
 /* ─── Empty state ────────────────────────────────────────────── */
@@ -309,24 +313,154 @@
   color: var(--color-accent);
 }
 
-/* ─── Remove button ──────────────────────────────────────────── */
-.dayoff-remove-btn {
+/* ─── Gear menu ──────────────────────────────────────────────── */
+.gear-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.gear-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: background 150ms, color 150ms;
+  transition: background 150ms, color 150ms, transform 250ms ease;
 }
 
-.dayoff-remove-btn:hover {
+.gear-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+
+.gear-btn.is-open {
+  background: var(--color-surface-2);
+  color: var(--color-accent);
+  transform: rotate(60deg);
+}
+
+.gear-dropdown {
+  position: fixed;
+  z-index: 500;
+  min-width: 140px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  overflow: hidden;
+  animation: dp-in 140ms ease-out both;
+}
+
+.gear-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  text-align: left;
+}
+
+.gear-item--edit {
+  color: var(--color-text-secondary);
+}
+.gear-item--edit:hover {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+.gear-item--remove {
+  color: var(--color-text-secondary);
+}
+.gear-item--remove:hover {
   background: var(--color-er-bg);
   color: var(--color-er);
+}
+
+/* ─── Action buttons (save/cancel in edit mode) ──────────────── */
+.dayoff-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dayoff-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms, transform 100ms;
+  flex-shrink: 0;
+}
+
+.dayoff-action-btn:active {
+  transform: scale(0.92);
+}
+
+.dayoff-action-btn--save {
+  background: var(--color-normal-bg);
+  color: var(--color-normal);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.dayoff-action-btn--save:hover:not(:disabled) {
+  background: var(--color-normal);
+  color: #fff;
+  border-color: var(--color-normal);
+}
+.dayoff-action-btn--save:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dayoff-action-btn--cancel {
+  background: var(--color-er-bg);
+  color: var(--color-er);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.dayoff-action-btn--cancel:hover {
+  background: var(--color-er);
+  color: #fff;
+  border-color: var(--color-er);
+}
+
+/* ─── Editing row ────────────────────────────────────────────── */
+.dayoff-row--editing td {
+  background: var(--color-accent-bg);
+  padding: 6px 8px;
+}
+
+.dayoff-row--editing td:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.dayoff-row--editing td:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.dayoff-select--inline {
+  height: 32px;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.dayoff-td--muted {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
 }
 
 /* ─── Responsive ─────────────────────────────────────────────── */

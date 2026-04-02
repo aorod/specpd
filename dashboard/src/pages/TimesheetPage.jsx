@@ -9,9 +9,10 @@ import StatusDonutChart from '../components/charts/StatusDonutChart.jsx';
 import ColumnChart from '../components/charts/ColumnChart.jsx';
 import RequisitoChart from '../components/charts/RequisitoChart.jsx';
 import TimesheetTable from '../components/table/TimesheetTable.jsx';
+import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import './UseCasePage.css';
 
-export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle }) {
+export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useTimesheetData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useTimesheetFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -113,6 +114,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle 
               <span className={`dashboard-badge-dot${loading ? ' is-loading' : error ? ' is-error' : ''}`} />
               {loading ? 'Carregando...' : error ? 'Offline' : 'Online'}
             </div>
+            <ProfileMenu onNavigate={onNavigate} />
           </div>
         </header>
 

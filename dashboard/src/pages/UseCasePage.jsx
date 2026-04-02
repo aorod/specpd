@@ -11,9 +11,10 @@ import VerticalBarChart from '../components/charts/VerticalBarChart.jsx';
 import RequisitoChart from '../components/charts/RequisitoChart.jsx';
 import LineChart from '../components/charts/LineChart.jsx';
 import UCTable from '../components/table/UCTable.jsx';
+import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import './UseCasePage.css';
 
-export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle }) {
+export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -98,6 +99,7 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle })
               <span className={`dashboard-badge-dot${loading ? ' is-loading' : error ? ' is-error' : ''}`} />
               {loading ? 'Carregando...' : error ? 'Offline' : 'Online'}
             </div>
+            <ProfileMenu onNavigate={onNavigate} />
           </div>
         </header>
 

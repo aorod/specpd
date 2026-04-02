@@ -11,7 +11,7 @@ const MENU_ITEMS = [
   },
   {
     id: 'ferias',
-    label: 'Férias / Abonos',
+    label: 'Colaboradores',
     description: 'Gerencie solicitações de férias e abonos da equipe',
     icon: CalendarRange,
     colorClass: 'info',
@@ -23,7 +23,7 @@ export default function HomePage({ onNavigate }) {
     <div className="home-page">
       <header className="home-header">
         <span className="home-logo-text">SpecPD</span>
-        <p className="home-subtitle">Selecione uma área para continuar</p>
+        <p className="home-subtitle">Selecione um módulo para continuar</p>
       </header>
 
       <div className="home-cards">
