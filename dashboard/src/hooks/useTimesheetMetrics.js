@@ -39,12 +39,14 @@ export function useTimesheetMetrics(filteredData) {
       p.fluxoNormal++;
       p.totalEffort += effort;
 
-      // porAtividade — shape compatível com RequisitoChart
+      // porAtividade — total em horas (effort)
       const atividadeKey = item.atividade || 'Sem Atividade';
       if (!porAtividadeMap.has(atividadeKey)) {
-        porAtividadeMap.set(atividadeKey, { total: 0 });
+        porAtividadeMap.set(atividadeKey, { total: 0, totalEffort: 0 });
       }
-      porAtividadeMap.get(atividadeKey).total++;
+      const a = porAtividadeMap.get(atividadeKey);
+      a.total++;
+      a.totalEffort += effort;
 
       // porResponsavel — shape compatível com VerticalBarChart
       const responsavelKey = item.assignedTo || 'Sem Responsável';

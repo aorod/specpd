@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Layers, AlertTriangle, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
+import { Layers, AlertTriangle, FileCheck, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
 import { useUCData } from '../hooks/useUCData.js';
 import { useFilters } from '../hooks/useFilters.js';
 import { useUCMetrics } from '../hooks/useUCMetrics.js';
@@ -33,10 +33,9 @@ export default function UseCasePage({ theme, setTheme }) {
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
   const cardDefs = [
-    { id: 'total',  icon: Layers,        label: 'Total de Caso de Uso',      value: metrics.totalUCs,     detail: null,                             accent: 'neutral' },
-    { id: 'normal', icon: FileCheck,     label: 'Fluxo Normal',       value: metrics.fluxoNormal,  detail: `${metrics.pctNormal}% do total`, accent: 'success' },
-    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa', value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`,     accent: 'er'      },
-    { id: 'semReq', icon: FileMinus,     label: 'Sem Documentação',   value: metrics.semRequisito, detail: null,                             accent: 'warning' },
+    { id: 'total',  icon: Layers,        label: 'Total de Caso de Uso', value: metrics.totalUCs,    detail: null,                             accent: 'neutral' },
+    { id: 'normal', icon: FileCheck,     label: 'Fluxo Normal',         value: metrics.fluxoNormal, detail: `${metrics.pctNormal}% do total`, accent: 'success' },
+    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa',   value: metrics.fluxoER,     detail: `${metrics.pctER}% do total`,     accent: 'er'      },
   ];
 
   const pinnedDefs   = cardDefs.filter((c) => pinnedCards.includes(c.id));
@@ -146,7 +145,7 @@ export default function UseCasePage({ theme, setTheme }) {
       {!loading && !error && (
         <main className="dashboard-main">
           {unpinnedDefs.length > 0 && (
-            <section className="metrics-grid" aria-label="Métricas principais">
+            <section className="metrics-grid metrics-grid--3" aria-label="Métricas principais">
               {unpinnedDefs.map((card) => (
                 <MetricCard
                   key={card.id}

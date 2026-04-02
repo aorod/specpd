@@ -26,7 +26,7 @@ export function useUCData() {
         if (!res.ok) return res.json().then((b) => Promise.reject(new Error(b.error ?? `HTTP ${res.status}`)));
         return res.json();
       })
-      .then(setData)
+      .then((all) => setData(all.filter((item) => item.workItemType === 'Caso de Uso')))
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err);
       })

@@ -14,10 +14,10 @@
 }
 
 .sidebar.is-expanded {
-  width: 200px;
+  width: 210px;
 }
 
-/* Hamburger toggle */
+/* ─── Hamburger toggle ─────────────────────────────────────────── */
 .sidebar-toggle {
   display: flex;
   align-items: center;
@@ -38,20 +38,135 @@
   background: var(--color-surface-2);
 }
 
-/* Nav items */
+/* ─── Nav container ────────────────────────────────────────────── */
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   padding: 8px 0;
   gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
+/* ─── Module ───────────────────────────────────────────────────── */
+.sidebar-module {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Module header button */
+.sidebar-module-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: default;
+  transition: color 150ms, background 150ms;
+}
+
+/* When expanded, header becomes interactive */
+.sidebar.is-expanded .sidebar-module-header {
+  justify-content: flex-start;
+  padding: 0 14px 0 12px;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.sidebar.is-expanded .sidebar-module-header:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-2);
+}
+
+.sidebar.is-expanded .sidebar-module-header.has-active {
+  color: var(--color-accent);
+}
+
+/* Module icon (visible when collapsed) */
+.sidebar-module-icon {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.sidebar.is-expanded .sidebar-module-icon {
+  opacity: 1;
+}
+
+/* Module label */
+.sidebar-module-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  width: 0;
+  transition: opacity 180ms ease, width 0ms 180ms;
+}
+
+.sidebar.is-expanded .sidebar-module-label {
+  opacity: 1;
+  width: auto;
+  transition: opacity 180ms ease;
+}
+
+/* Chevron */
+.sidebar-module-chevron {
+  flex-shrink: 0;
+  opacity: 0;
+  transform: rotate(0deg);
+  transition: transform 200ms ease, opacity 180ms ease;
+}
+
+.sidebar.is-expanded .sidebar-module-chevron {
+  opacity: 0.5;
+}
+
+.sidebar.is-expanded .sidebar-module-header.is-open .sidebar-module-chevron {
+  transform: rotate(90deg);
+  opacity: 0.8;
+}
+
+/* ─── Module items (accordion body) ───────────────────────────── */
+.sidebar-module-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 220ms ease;
+}
+
+/* Collapsed sidebar: always show items (no accordion) */
+.sidebar:not(.is-expanded) .sidebar-module-items {
+  max-height: 200px;
+}
+
+/* Expanded sidebar: accordion controlled by .is-open */
+.sidebar.is-expanded .sidebar-module-items {
+  max-height: 0;
+}
+
+.sidebar.is-expanded .sidebar-module-items.is-open {
+  max-height: 200px;
+}
+
+/* ─── Nav item ─────────────────────────────────────────────────── */
 .sidebar-item {
   display: flex;
   align-items: center;
   gap: 0;
   width: 100%;
-  height: 40px;
+  height: 36px;
   padding: 0;
   justify-content: center;
   border: none;
@@ -65,7 +180,14 @@
   text-align: left;
 }
 
-.sidebar.is-expanded .sidebar-item {
+/* Indented when inside a module and expanded */
+.sidebar.is-expanded .sidebar-module-items .sidebar-item {
+  justify-content: flex-start;
+  padding: 0 16px 0 28px;
+  gap: 9px;
+}
+
+.sidebar.is-expanded .sidebar-footer .sidebar-item {
   justify-content: flex-start;
   padding: 0 16px;
   gap: 10px;
@@ -98,4 +220,11 @@
   opacity: 1;
   width: auto;
   transition: opacity 180ms ease;
+}
+
+/* ─── Footer (home button) ─────────────────────────────────────── */
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+  padding: 8px 0;
 }

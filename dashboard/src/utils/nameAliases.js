@@ -11,6 +11,14 @@ const NAME_ALIASES = {
   'Lucas Ceciliano Teixeira':              'Lucas Ceciliano',
   'Vando Rodrigues dos Santos':            'Vando Rodrigues',
   'Willian Alexandre Dutra Nunes':         'Willian Nunes',
+  'Larissa Carvalho Rodrigues':           'Larissa Carvalho',
+  'Jessica Cristina Abreu Costa':         'Jessica Costa',
+  'Bruno Basini Camargo':                 'Bruno Bassini',
+  'Rafaele Barbosa da Silva Serrano':         'Rafaele Barbosa',
+  'Fabricia Alves da Silva Carneiro Souto':   'Fabricia Alves',
+  'Leandro Campos Lima':                  'Leandro Campos',
+  'Priscila Lopes Gonzaga':               'Priscila Lopes',
+  'Leonardo Jorge Silva Rodriguez':         'Leonardo Silva',
 };
 
 /**

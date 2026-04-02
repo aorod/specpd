@@ -11,13 +11,14 @@ const MAX_PAGE_BTNS = 10;
 const ADO_BASE = 'https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/edit/';
 
 const SORTABLE_COLS = [
-  { key: 'produto',       label: 'Produto' },
-  { key: 'mes',           label: 'Mês' },
-  { key: 'ano',           label: 'Ano' },
-  { key: 'designer',      label: 'Designer' },
-  { key: 'requisito',     label: 'Requisito' },
-  { key: 'state',         label: 'Status' },
-  { key: 'subStatus',     label: 'Sub Status' },
+  { key: 'produto',       label: 'Produto'       },
+  { key: 'assignedTo',    label: 'PM&A'          },
+  { key: 'mes',           label: 'Mês'           },
+  { key: 'ano',           label: 'Ano'           },
+  { key: 'designer',      label: 'Designer'      },
+  { key: 'requisito',     label: 'Requisito'     },
+  { key: 'state',         label: 'Status'        },
+  { key: 'subStatus',     label: 'Sub Status'    },
   { key: 'classificacao', label: 'Classificação' },
 ];
 
@@ -123,6 +124,7 @@ export default function UCTable({ data }) {
                       <span title={item.title} className="title-text">{item.title}</span>
                     </td>
                     <td>{item.produto}</td>
+                    <td>{aliasName(item.assignedTo)}</td>
                     <td>{formatMesLabel(item.mes)}</td>
                     <td>{item.ano}</td>
                     <td>{aliasName(item.designer)}</td>

@@ -9,14 +9,13 @@ const OUTER_R = 78;
 const INNER_R = 50;
 
 const STATUS_COLOR_MAP = {
-  'Finalizado':   'var(--color-normal)',
-  'Em Andamento': '#f97316',
+  'Não Iniciado': '#fe0000',
+  'Em Andamento': '#00d5ff',
+  'Finalizado':   '#22c55e',
 };
 const FALLBACK_COLORS = [
-  'var(--color-er)',
-  '#f59e0b',
-  '#06b6d4',
   '#8b5cf6',
+  '#f59e0b',
   '#ec4899',
   '#14b8a6',
   '#f97316',

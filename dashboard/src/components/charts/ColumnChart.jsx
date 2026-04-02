@@ -21,8 +21,10 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
     asc ? a.total - b.total : b.total - a.total
   );
 
-  const maxTotal = Math.max(...entries.map(([, v]) => v.total), 1);
-  const svgW     = PAD_X * 2 + entries.length * COL_W + Math.max(0, entries.length - 1) * COL_GAP;
+  const maxTotal  = Math.max(...entries.map(([, v]) => v.total), 1);
+  const MIN_SLOTS = 15;
+  const slots     = Math.max(entries.length, MIN_SLOTS);
+  const svgW      = PAD_X * 2 + slots * COL_W + Math.max(0, slots - 1) * COL_GAP;
 
   const sortButton = (
     <button
@@ -46,8 +48,9 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
         >
           <title>{title}</title>
           {entries.map(([key, { total }], i) => {
-            const barH  = (total / maxTotal) * BAR_H;
-            const x     = PAD_X + i * (COL_W + COL_GAP);
+            const barH   = (total / maxTotal) * BAR_H;
+            const offset = ((slots - entries.length) * (COL_W + COL_GAP)) / 2;
+            const x      = PAD_X + offset + i * (COL_W + COL_GAP);
             const barY  = PAD_TOP + (BAR_H - barH);
             const cx    = x + COL_W / 2;
 
@@ -89,7 +92,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
                 {/* Contagem acima da barra */}
                 <text
                   x={cx}
-                  y={barY - 4}
+                  y={barY - 3}
                   textAnchor="middle"
                   fontSize={9}
                   fontWeight="600"

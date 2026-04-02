@@ -54,7 +54,7 @@ const toSmoothArea = (pts, baseline) => {
 const yPos = (v, maxVal) => PAD.top + CHART_H - (v / maxVal) * CHART_H;
 const tickCount = 4;
 
-export default function LineChart({ data, anos = [], forceCollapsed, title = 'Evolução por Mês', dotRadius = 2 }) {
+export default function LineChart({ data, anos = [], forceCollapsed, title = 'Evolução Por Fluxo', dotRadius = 2 }) {
   const [tooltip, setTooltip] = useState(null);
 
   const entries = [...data.entries()].filter(([key]) => {

@@ -27,12 +27,28 @@ export default function TimesheetPage({ theme, setTheme }) {
 
   const metrics = useTimesheetMetrics(displayData);
 
+  const porResponsavelHoras = useMemo(() => {
+    const map = new Map();
+    for (const [key, val] of metrics.porResponsavel.entries()) {
+      map.set(key, { total: parseFloat(val.totalEffort.toFixed(1)) });
+    }
+    return map;
+  }, [metrics.porResponsavel]);
+
+  const porAtividadeHoras = useMemo(() => {
+    const map = new Map();
+    for (const [key, val] of metrics.porAtividade.entries()) {
+      map.set(key, { total: parseFloat(val.totalEffort.toFixed(1)) });
+    }
+    return map;
+  }, [metrics.porAtividade]);
+
   const togglePin = (id) =>
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
   const cardDefs = [
     { id: 'total',    icon: ClipboardList, label: 'Total de Timesheets', value: metrics.totalTimesheets, detail: null,                                    accent: 'neutral' },
-    { id: 'effort',   icon: Clock,         label: 'Total de Horas',      value: metrics.totalEffort,     detail: 'horas registradas',                    accent: 'muted'   },
+    { id: 'effort',   icon: Clock,         label: 'Total de Horas',      value: parseFloat(metrics.totalEffort.toFixed(1)), detail: 'horas registradas', accent: 'muted' },
     { id: 'comAtiv',  icon: FileCheck,     label: 'Com Atividade',       value: metrics.comAtividade,    detail: `${metrics.pctComAtividade}% do total`, accent: 'success' },
     { id: 'semAtiv',  icon: FileMinus,     label: 'Sem Atividade',       value: metrics.semAtividade,    detail: `${metrics.pctSemAtividade}% do total`, accent: 'warning' },
   ];
@@ -162,10 +178,10 @@ export default function TimesheetPage({ theme, setTheme }) {
 
           <section className="charts-grid" aria-label="Gráficos">
             <div style={{ gridColumn: '1 / -1' }}>
-              <ColumnChart data={metrics.porResponsavel} forceCollapsed={chartsCollapsed} title="Analistas" tooltipLabel="Total de timesheets" />
+              <ColumnChart data={porResponsavelHoras} forceCollapsed={chartsCollapsed} title="Analistas" tooltipLabel="Total de horas" />
             </div>
             <StatusDonutChart data={metrics.porStatus} forceCollapsed={chartsCollapsed} />
-            <RequisitoChart data={metrics.porAtividade} forceCollapsed={chartsCollapsed} title="Atividades" tooltipLabel="Total de timesheets" />
+            <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />
           </section>
 
           <section aria-label="Tabela de Timesheets">
