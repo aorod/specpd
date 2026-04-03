@@ -56,10 +56,12 @@ function GearMenu({ onEditar, onRemover }) {
     </div>
   );
 }
+
 import { ANALISTAS } from '../utils/nameAliases.js';
 import { EQUIPE_MAP } from '../utils/equipeList.js';
 import DatePicker from '../components/datepicker/DatePicker.jsx';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
+import { useDayOffs } from '../hooks/useDayOffs.js';
 import './DayOffPage.css';
 
 const TIPOS_ABONO = ['Atestado', 'Day Off'];
@@ -71,57 +73,47 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
   const [dataFim, setDataFim]       = useState('');
   const [tipoAbono, setTipoAbono]   = useState('');
 
-  // Grid state
-  const [registros, setRegistros] = useState([]);
-
   // Editing state
   const [editingId, setEditingId]   = useState(null);
   const [editFields, setEditFields] = useState({});
+
+  const { registros, loading, error, incluir, editar, remover } = useDayOffs();
 
   // Equipe vem direto do EQUIPE_MAP pelo alias do analista selecionado
   const alias  = ANALISTAS.find((a) => a.fullName === analista)?.alias ?? '';
   const equipe = alias ? (EQUIPE_MAP[alias] || '—') : '';
 
-  function handleIncluir() {
+  async function handleIncluir() {
     if (!analista || !dataInicio || !dataFim || !tipoAbono) return;
-    setRegistros((prev) => [
-      ...prev,
-      { id: Date.now(), analista: alias, equipe, dataInicio, dataFim, tipoAbono },
-    ]);
+    await incluir({ analista: alias, equipe, dataInicio, dataFim, tipoAbono });
     setAnalista('');
     setDataInicio('');
     setDataFim('');
     setTipoAbono('');
   }
 
-  function handleRemover(id) {
+  async function handleRemover(id) {
     if (editingId === id) setEditingId(null);
-    setRegistros((prev) => prev.filter((r) => r.id !== id));
+    await remover(id);
   }
 
   function handleEditar(r) {
     setEditingId(r.id);
-    // Find fullName for the alias
     const found = ANALISTAS.find((a) => a.alias === r.analista);
     setEditFields({
-      analista:  found?.fullName ?? '',
+      analista:   found?.fullName ?? '',
       dataInicio: r.dataInicio,
       dataFim:    r.dataFim,
       tipoAbono:  r.tipoAbono,
     });
   }
 
-  function handleSalvar(id) {
+  async function handleSalvar(id) {
     const f = editFields;
     if (!f.analista || !f.dataInicio || !f.dataFim || !f.tipoAbono) return;
     const editAlias  = ANALISTAS.find((a) => a.fullName === f.analista)?.alias ?? f.analista;
     const editEquipe = EQUIPE_MAP[editAlias] || '—';
-    setRegistros((prev) =>
-      prev.map((r) => r.id === id
-        ? { ...r, analista: editAlias, equipe: editEquipe, dataInicio: f.dataInicio, dataFim: f.dataFim, tipoAbono: f.tipoAbono }
-        : r
-      )
-    );
+    await editar(id, { analista: editAlias, equipe: editEquipe, dataInicio: f.dataInicio, dataFim: f.dataFim, tipoAbono: f.tipoAbono });
     setEditingId(null);
   }
 
@@ -253,7 +245,7 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
         <div className="dayoff-grid-header">
           <span className="dayoff-grid-title">Registros</span>
           <span className="dayoff-grid-count">
-            {registros.length} {registros.length === 1 ? 'registro' : 'registros'}
+            {loading ? 'Carregando…' : `${registros.length} ${registros.length === 1 ? 'registro' : 'registros'}`}
           </span>
         </div>
 
@@ -274,7 +266,17 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
               </tr>
             </thead>
             <tbody>
-              {registros.length === 0 ? (
+              {error ? (
+                <tr>
+                  <td colSpan={7} className="dayoff-empty">
+                    Erro ao carregar registros: {error}
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan={7} className="dayoff-empty">Carregando…</td>
+                </tr>
+              ) : registros.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="dayoff-empty">
                     Nenhum registro adicionado. Preencha os campos acima e clique em Incluir.
@@ -287,7 +289,6 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                   if (isEditing) {
                     return (
                       <tr key={r.id} className="dayoff-row--editing">
-                        {/* Analista */}
                         <td>
                           <select
                             className="dayoff-select dayoff-select--inline"
@@ -300,18 +301,15 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                             ))}
                           </select>
                         </td>
-                        {/* Equipe — auto */}
                         <td className="dayoff-td--muted">
                           {editAlias ? (EQUIPE_MAP[editAlias] || '—') : '—'}
                         </td>
-                        {/* Data Início */}
                         <td>
                           <DatePicker
                             value={editFields.dataInicio}
                             onChange={(v) => setEditFields((f) => ({ ...f, dataInicio: v }))}
                           />
                         </td>
-                        {/* Data Fim */}
                         <td>
                           <DatePicker
                             value={editFields.dataFim}
@@ -319,11 +317,9 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                             minDate={editFields.dataInicio}
                           />
                         </td>
-                        {/* Dias Úteis */}
                         <td className="dayoff-td--dias">
                           {calcDiasUteis(editFields.dataInicio, editFields.dataFim)}
                         </td>
-                        {/* Tipo de Abono */}
                         <td>
                           <select
                             className="dayoff-select dayoff-select--inline"
@@ -336,7 +332,6 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                             ))}
                           </select>
                         </td>
-                        {/* Ações */}
                         <td>
                           <div className="dayoff-actions">
                             <button

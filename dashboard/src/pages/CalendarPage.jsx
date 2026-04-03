@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Sun, Moon, ChevronDown } from 'lucide-react';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
+import { api } from '../api/localClient.js';
 import './CalendarPage.css';
 
 const MESES = [
@@ -10,20 +11,57 @@ const MESES = [
 const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 const ANO_ATUAL = new Date().getFullYear();
-const ANOS = Array.from({ length: 20 }, (_, i) => ANO_ATUAL - 5 + i); // -5 a +14
+// 1 ano anterior + atual + 14 posteriores = 16 anos no total
+const ANOS = Array.from({ length: 16 }, (_, i) => ANO_ATUAL - 1 + i);
 
-function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
+// ── Cálculo de Páscoa (algoritmo de Meeus/Jones/Butcher) ─────────────────────
+function getEasterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day   = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
 }
 
-function getFirstDayOfWeek(year, month) {
-  return new Date(year, month, 1).getDay();
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function MonthGrid({ year, month, holidays }) {
-  const daysInMonth  = getDaysInMonth(year, month);
+// ── Feriados Municipais do Rio de Janeiro ─────────────────────────────────────
+function getRioMunicipalHolidays(year) {
+  const easter = getEasterDate(year);
+
+  const carnavalTerca  = new Date(easter); carnavalTerca.setDate(easter.getDate() - 47);
+  const carnavalSegunda = new Date(easter); carnavalSegunda.setDate(easter.getDate() - 48);
+
+  return [
+    { date: `${year}-01-20`, name: 'São Sebastião — Padroeiro do Rio de Janeiro' },
+    { date: toISO(carnavalSegunda),  name: 'Segunda-feira de Carnaval' },
+    { date: toISO(carnavalTerca),   name: 'Terça-feira de Carnaval' },
+    { date: `${year}-04-23`, name: 'Dia de São Jorge' },
+    { date: `${year}-12-08`, name: 'Nossa Senhora da Conceição' },
+  ];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getDaysInMonth(year, month)    { return new Date(year, month + 1, 0).getDate(); }
+function getFirstDayOfWeek(year, month) { return new Date(year, month, 1).getDay(); }
+
+// ── MonthGrid ─────────────────────────────────────────────────────────────────
+function MonthGrid({ year, month, holidays, municipalHolidays, pontoFacultativo, onToggle }) {
+  const daysInMonth    = getDaysInMonth(year, month);
   const firstDayOfWeek = getFirstDayOfWeek(year, month);
-  const today = new Date();
+  const today          = new Date();
 
   const cells = [];
   for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
@@ -40,12 +78,15 @@ function MonthGrid({ year, month, holidays }) {
 
         {cells.map((day, i) => {
           if (!day) return <span key={i} className="cal-day cal-day--empty" />;
-          const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const holiday = holidays.find((h) => h.date === iso);
-          const isToday =
+
+          const iso        = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const holiday    = holidays.find((h) => h.date === iso);
+          const municipal  = !holiday && municipalHolidays.find((h) => h.date === iso);
+          const facultativo = pontoFacultativo.has(iso);
+          const isToday    =
             today.getFullYear() === year &&
-            today.getMonth() === month &&
-            today.getDate() === day;
+            today.getMonth()    === month &&
+            today.getDate()     === day;
           const isWeekend = (() => {
             const dow = new Date(year, month, day).getDay();
             return dow === 0 || dow === 6;
@@ -56,14 +97,24 @@ function MonthGrid({ year, month, holidays }) {
               key={i}
               className={[
                 'cal-day',
-                isToday    ? 'cal-day--today'   : '',
-                holiday    ? 'cal-day--holiday' : '',
-                isWeekend  ? 'cal-day--weekend' : '',
-              ].join(' ')}
-              title={holiday ? holiday.name : undefined}
+                'cal-day--clickable',
+                isToday     ? 'cal-day--today'       : '',
+                facultativo ? 'cal-day--facultativo'  : '',
+                !facultativo && holiday   ? 'cal-day--holiday'   : '',
+                !facultativo && municipal ? 'cal-day--municipal'  : '',
+                isWeekend   ? 'cal-day--weekend'      : '',
+              ].filter(Boolean).join(' ')}
+              title={
+                facultativo
+                  ? 'Feriado (Ponto Facultativo)'
+                  : holiday?.name ?? municipal?.name ?? undefined
+              }
+              onClick={() => onToggle(iso)}
             >
               <span className="cal-day-num">{day}</span>
-              {holiday && <span className="cal-day-holiday-dot" title={holiday.name} />}
+              {facultativo && <span className="cal-day-holiday-dot cal-day-holiday-dot--facultativo" />}
+              {!facultativo && holiday   && <span className="cal-day-holiday-dot" />}
+              {!facultativo && municipal && <span className="cal-day-holiday-dot cal-day-holiday-dot--municipal" />}
             </div>
           );
         })}
@@ -72,12 +123,44 @@ function MonthGrid({ year, month, holidays }) {
   );
 }
 
-export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
-  const [ano, setAno]           = useState(ANO_ATUAL);
-  const [holidays, setHolidays] = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState(null);
+// ── Modal de confirmação ──────────────────────────────────────────────────────
+function SaveModal({ onCancel, onConfirm }) {
+  return (
+    <div className="cal-modal-backdrop" onClick={onCancel}>
+      <div className="cal-modal" onClick={(e) => e.stopPropagation()}>
+        <p className="cal-modal-message">
+          Deseja salvar as alterações de Feriado por Ponto Facultativo?
+        </p>
+        <div className="cal-modal-actions">
+          <button className="cal-modal-btn cal-modal-btn--cancel" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button className="cal-modal-btn cal-modal-btn--confirm" onClick={onConfirm}>
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
+  const [ano, setAno]                   = useState(ANO_ATUAL);
+  const [holidays, setHolidays]         = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState(null);
+  const [pontoFacultativo, setPontoFac] = useState(new Set());
+  // Map de iso → id do banco (estado salvo)
+  const [savedPontoFac, setSavedPontoFac] = useState(new Map());
+  const [showModal, setShowModal]       = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [toastMsg, setToastMsg]         = useState(null);
+
+  // Feriados municipais calculados localmente (sem fetch)
+  const municipalHolidays = useMemo(() => getRioMunicipalHolidays(ano), [ano]);
+
+  // Feriados nacionais via BrasilAPI
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -90,6 +173,78 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [ano]);
+
+  // Carrega pontos facultativos salvos no banco ao mudar ano
+  useEffect(() => {
+    api.get(`/calendar/events?ano=${ano}`)
+      .then((events) => {
+        const facultativos = events.filter((e) => e.tipo === 'ponto_facultativo');
+        const savedMap = new Map(facultativos.map((e) => [e.data, e.id]));
+        setSavedPontoFac(savedMap);
+        setPontoFac(new Set(savedMap.keys()));
+      })
+      .catch(() => {
+        // falha silenciosa: não bloqueia o calendário
+      });
+  }, [ano]);
+
+  // Exibe toast por 3 segundos
+  function showToast(msg) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  }
+
+  function togglePontoFac(iso) {
+    setPontoFac((prev) => {
+      const next = new Set(prev);
+      if (next.has(iso)) next.delete(iso);
+      else next.add(iso);
+      return next;
+    });
+  }
+
+  function handleSaveClick() {
+    const toAdd    = [...pontoFacultativo].filter((iso) => !savedPontoFac.has(iso));
+    const toRemove = [...savedPontoFac.keys()].filter((iso) => !pontoFacultativo.has(iso));
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      showToast('Nenhuma alteração foi feita para salvar');
+      return;
+    }
+    setShowModal(true);
+  }
+
+  async function handleConfirmSave() {
+    const toAdd    = [...pontoFacultativo].filter((iso) => !savedPontoFac.has(iso));
+    const toRemove = [...savedPontoFac.keys()].filter((iso) => !pontoFacultativo.has(iso));
+
+    setSaving(true);
+    try {
+      await Promise.all([
+        ...toAdd.map((iso) =>
+          api.post('/calendar/events', {
+            data: iso,
+            titulo: 'Feriado (Ponto Facultativo)',
+            tipo: 'ponto_facultativo',
+          })
+        ),
+        ...toRemove.map((iso) =>
+          api.delete(`/calendar/events/${savedPontoFac.get(iso)}`)
+        ),
+      ]);
+
+      // Recarrega estado salvo do banco
+      const events = await api.get(`/calendar/events?ano=${ano}`);
+      const facultativos = events.filter((e) => e.tipo === 'ponto_facultativo');
+      const newSavedMap = new Map(facultativos.map((e) => [e.data, e.id]));
+      setSavedPontoFac(newSavedMap);
+      setPontoFac(new Set(newSavedMap.keys()));
+    } catch (err) {
+      showToast(`Erro ao salvar: ${err.message}`);
+    } finally {
+      setSaving(false);
+      setShowModal(false);
+    }
+  }
 
   return (
     <div className="calendar-page">
@@ -111,10 +266,11 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
         <header className="calendar-header">
           <div>
             <h1 className="calendar-title">Calendário</h1>
-            <p className="calendar-subtitle">Visualização de feriados nacionais · {ano}</p>
+            <p className="calendar-subtitle">Feriados nacionais e municipais do Rio de Janeiro · {ano}</p>
           </div>
           <div className="calendar-header-right">
-            {/* Dropdown Ano */}
+
+            {/* ── Dropdown de anos ──────────────────────────────── */}
             <div className="cal-year-select-wrap">
               <select
                 className="cal-year-select"
@@ -148,6 +304,14 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
           Feriado nacional
         </span>
         <span className="cal-legend-item">
+          <span className="cal-legend-dot cal-legend-dot--municipal" />
+          Feriado municipal (RJ)
+        </span>
+        <span className="cal-legend-item">
+          <span className="cal-legend-dot cal-legend-dot--facultativo" />
+          Feriado (Ponto Facultativo)
+        </span>
+        <span className="cal-legend-item">
           <span className="cal-legend-dot cal-legend-dot--today" />
           Hoje
         </span>
@@ -155,8 +319,8 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
           <span className="cal-legend-dot cal-legend-dot--weekend" />
           Final de semana
         </span>
-        {loading && <span className="cal-legend-loading">Carregando feriados…</span>}
-        {error   && <span className="cal-legend-error">Erro ao carregar feriados</span>}
+        {loading && <span className="cal-legend-loading">Carregando feriados nacionais…</span>}
+        {error   && <span className="cal-legend-error">Erro ao carregar feriados nacionais</span>}
       </div>
 
       {/* ── Grade de meses ─────────────────────────────────────────── */}
@@ -167,9 +331,42 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
             year={ano}
             month={monthIdx}
             holidays={holidays}
+            municipalHolidays={municipalHolidays}
+            pontoFacultativo={pontoFacultativo}
+            onToggle={togglePontoFac}
           />
         ))}
       </div>
+
+      {/* ── Bottom bar fixa ────────────────────────────────────────── */}
+      <div className="calendar-sticky-bottom">
+        <button
+          className="cal-bottom-btn cal-bottom-btn--back"
+          onClick={() => onNavigate('home')}
+        >
+          Voltar
+        </button>
+        <button
+          className="cal-bottom-btn cal-bottom-btn--save"
+          onClick={handleSaveClick}
+          disabled={saving}
+        >
+          {saving ? 'Salvando…' : 'Salvar'}
+        </button>
+      </div>
+
+      {/* ── Modal de confirmação ────────────────────────────────────── */}
+      {showModal && (
+        <SaveModal
+          onCancel={() => setShowModal(false)}
+          onConfirm={handleConfirmSave}
+        />
+      )}
+
+      {/* ── Toast ──────────────────────────────────────────────────── */}
+      {toastMsg && (
+        <div className="cal-toast">{toastMsg}</div>
+      )}
 
     </div>
   );

@@ -2,7 +2,7 @@
 .calendar-page {
   max-width: 1800px;
   margin: 0 auto;
-  padding: 0 40px 48px;
+  padding: 0 40px 100px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -111,9 +111,11 @@
   flex-shrink: 0;
 }
 
-.cal-legend-dot--holiday { background: var(--color-normal); }
-.cal-legend-dot--today   { background: var(--color-accent); }
-.cal-legend-dot--weekend { background: var(--color-border); }
+.cal-legend-dot--holiday     { background: var(--color-normal); }
+.cal-legend-dot--municipal   { background: #ca8a04; }
+.cal-legend-dot--facultativo { background: #ef4444; }
+.cal-legend-dot--today       { background: var(--color-accent); }
+.cal-legend-dot--weekend     { background: var(--color-border); }
 
 .cal-legend-loading {
   font-size: 0.78rem;
@@ -186,6 +188,14 @@
   pointer-events: none;
 }
 
+.cal-day--clickable {
+  cursor: pointer;
+}
+
+.cal-day--clickable:hover {
+  background: var(--color-surface-2);
+}
+
 .cal-day-num {
   font-size: 0.72rem;
   font-family: var(--font-sans);
@@ -235,6 +245,185 @@
   background: linear-gradient(135deg, var(--color-accent-bg) 50%, var(--color-normal-bg) 50%);
 }
 
+/* Municipal holiday (RJ) — amarelo */
+.cal-day--municipal {
+  background: rgba(202, 138, 4, 0.10);
+}
+
+.cal-day--municipal .cal-day-num {
+  color: #ca8a04;
+  font-weight: 700;
+}
+
+.cal-day-holiday-dot--municipal {
+  background: #ca8a04;
+}
+
+/* Today + municipal */
+.cal-day--today.cal-day--municipal {
+  background: linear-gradient(135deg, var(--color-accent-bg) 50%, rgba(202,138,4,.10) 50%);
+}
+
+/* Ponto Facultativo — vermelho */
+.cal-day--facultativo {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.cal-day--facultativo .cal-day-num {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.cal-day-holiday-dot--facultativo {
+  background: #ef4444;
+}
+
+.cal-day--today.cal-day--facultativo {
+  background: linear-gradient(135deg, var(--color-accent-bg) 50%, rgba(239,68,68,.12) 50%);
+}
+
+/* ─── Sticky bottom bar ──────────────────────────────────────── */
+.calendar-sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 40px;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.cal-bottom-btn {
+  height: 36px;
+  padding: 0 22px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  transition: background 150ms, border-color 150ms, color 150ms;
+}
+
+.cal-bottom-btn--back {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.cal-bottom-btn--back:hover {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
+.cal-bottom-btn--save {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.cal-bottom-btn--save:hover {
+  opacity: 0.88;
+}
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.cal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+.cal-modal-message {
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.cal-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cal-modal-btn {
+  height: 36px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  transition: background 150ms, opacity 150ms;
+}
+
+.cal-modal-btn--cancel {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.cal-modal-btn--cancel:hover {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
+.cal-modal-btn--confirm {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.cal-modal-btn--confirm:hover {
+  opacity: 0.88;
+}
+
+/* ─── Toast ──────────────────────────────────────────────────── */
+.cal-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 500;
+  white-space: nowrap;
+  animation: cal-toast-in 0.2s ease;
+}
+
+@keyframes cal-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1400px) {
   .cal-months-grid {
@@ -250,10 +439,14 @@
 
 @media (max-width: 600px) {
   .calendar-page {
-    padding: 0 16px 48px;
+    padding: 0 16px 100px;
   }
 
   .cal-months-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-sticky-bottom {
+    padding: 12px 16px;
   }
 }

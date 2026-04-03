@@ -1,0 +1,798 @@
+/* ─── Badges específicos de Férias ───────────────────────────── */
+.dayoff-badge--ferias {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+.dayoff-badge--ferias-coletivas {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.dayoff-badge--licenca-medica {
+  background: var(--color-warning-bg, rgba(234,179,8,.12));
+  color: var(--color-warning, #ca8a04);
+}
+
+.dayoff-badge--licenca {
+  background: var(--color-normal-bg);
+  color: var(--color-normal);
+}
+
+/* ─── Observação inline input ────────────────────────────────── */
+.ferias-input--obs {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 150ms, color 150ms;
+}
+
+.ferias-input--obs:focus {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.ferias-input--obs::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ─── Label com tooltip ──────────────────────────────────────── */
+.ferias-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.ferias-label-row .dayoff-label {
+  margin-bottom: 0;
+}
+
+.ferias-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ferias-tooltip-icon {
+  color: var(--color-text-muted);
+  cursor: help;
+  display: block;
+}
+
+.ferias-tooltip-text {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms;
+  z-index: 100;
+}
+
+.ferias-tooltip-wrap:hover .ferias-tooltip-text {
+  opacity: 1;
+}
+
+/* ─── Selector row ───────────────────────────────────────────── */
+.ferias-selector-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ferias-analista-field {
+  flex: 0 0 280px;
+  min-width: 200px;
+}
+
+.ferias-solicitar-btn {
+  height: 36px;
+  padding: 0 22px;
+  border-radius: 100px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, transform 100ms;
+  white-space: nowrap;
+}
+
+.ferias-solicitar-btn:not(:disabled):hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.ferias-solicitar-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.ferias-solicitar-btn:disabled {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ─── Modal overlay ──────────────────────────────────────────── */
+.fmodal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.fmodal-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+  width: 100%;
+  max-width: 940px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fmodal-in 180ms ease-out both;
+}
+
+@keyframes fmodal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Header ─────────────────────────────────────────────────── */
+.fmodal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.fmodal-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fmodal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.fmodal-title-bar {
+  width: 40px;
+  height: 3px;
+  background: var(--color-accent);
+  border-radius: 2px;
+}
+
+.fmodal-close-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+  flex-shrink: 0;
+}
+
+.fmodal-close-btn:hover {
+  background: var(--color-er-bg);
+  color: var(--color-er);
+  border-color: rgba(239,68,68,0.4);
+}
+
+/* ─── Stats bar ──────────────────────────────────────────────── */
+.fmodal-stats {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.fmodal-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+}
+
+.fmodal-stat-icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.fmodal-stat-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  line-height: 1;
+}
+
+.fmodal-stat-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: 3px;
+}
+
+.fmodal-stat-sep {
+  width: 1px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: 8px 0;
+}
+
+/* ─── Options bar (dentro da col-left, acima do período) ────── */
+.fmodal-options-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.fmodal-options-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ─── Body ───────────────────────────────────────────────────── */
+.fmodal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.fmodal-col-left {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+}
+
+.fmodal-col-right {
+  width: 270px;
+  flex-shrink: 0;
+  padding: 20px;
+  background: var(--color-surface-2);
+  overflow-y: auto;
+}
+
+/* ─── Período header ─────────────────────────────────────────── */
+.fmodal-periodo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.fmodal-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.fmodal-reset-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+}
+
+.fmodal-reset-btn:hover {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* ─── Dual calendar ──────────────────────────────────────────── */
+.fcal-wrapper {
+  margin-bottom: 20px;
+}
+
+.fcal-dual {
+  display: flex;
+  gap: 20px;
+}
+
+.fcal-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.fcal-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 4px;
+}
+
+.fcal-panel-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: center;
+  flex: 1;
+}
+
+.fcal-panel-header-spacer {
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.fcal-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 150ms, color 150ms;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fcal-nav-btn:hover {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+/* ─── Month grid ─────────────────────────────────────────────── */
+.fcal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 2px;
+}
+
+.fcal-weekday {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 3px 0;
+}
+
+.fcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.fcal-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 100ms, color 100ms;
+  user-select: none;
+}
+
+.fcal-cell--empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.fcal-cell--disabled {
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.fcal-cell:not(.fcal-cell--empty):not(.fcal-cell--selected):not(.fcal-cell--range):hover {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+.fcal-cell--today {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.fcal-cell--today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* Range highlight */
+.fcal-cell--range {
+  background: rgba(37,99,235,0.08);
+  color: var(--color-accent);
+  border-radius: 0;
+}
+
+.fcal-cell--range-start {
+  border-radius: 4px 0 0 4px;
+}
+
+.fcal-cell--range-end {
+  border-radius: 0 4px 4px 0;
+}
+
+/* Selected (start/end) */
+.fcal-cell--selected {
+  background: var(--color-accent) !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  font-weight: 600;
+  z-index: 1;
+}
+
+/* Holiday dot */
+.fcal-holiday-dot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ef4444;
+  pointer-events: none;
+}
+
+.fcal-cell--selected .fcal-holiday-dot {
+  background: rgba(255,255,255,0.7);
+}
+
+/* ─── Form fields ────────────────────────────────────────────── */
+.fmodal-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.fmodal-field-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fmodal-field-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fmodal-field-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.fmodal-radio-group {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.fmodal-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.fmodal-radio-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 150ms, background 150ms;
+}
+
+/* Sim — blue ring with blue dot */
+.fmodal-radio-circle--light {
+  border-color: var(--color-accent);
+}
+
+.fmodal-radio-circle--light::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* Não — dark filled circle */
+.fmodal-radio-circle--dark {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
+.fmodal-radio-circle--dark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.fmodal-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  resize: vertical;
+  outline: none;
+  transition: border-color 150ms;
+  box-sizing: border-box;
+}
+
+.fmodal-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.fmodal-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ─── Requirements panel ─────────────────────────────────────── */
+.fmodal-req-title {
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+.fmodal-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fmodal-req-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.fmodal-req-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  color: var(--color-text-muted);
+}
+
+.fmodal-req-item--ok  .fmodal-req-icon { color: #16a34a; }
+.fmodal-req-item--err .fmodal-req-icon { color: #dc2626; }
+
+.fmodal-req-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  display: inline-block;
+  margin-top: 1px;
+}
+
+.fmodal-req-text {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.fmodal-req-item--ok  .fmodal-req-text { color: #16a34a; font-weight: 500; }
+.fmodal-req-item--err .fmodal-req-text { color: #dc2626; font-weight: 500; }
+
+/* ─── Footer ─────────────────────────────────────────────────── */
+.fmodal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.fmodal-btn {
+  height: 40px;
+  padding: 0 28px;
+  border-radius: 100px;
+  font-size: 0.76rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+  white-space: nowrap;
+}
+
+.fmodal-btn--cancel {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.fmodal-btn--cancel:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text-primary);
+}
+
+.fmodal-btn--submit {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.fmodal-btn--submit.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.fmodal-btn--submit.is-active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* ─── Status Férias select ───────────────────────────────────── */
+.ferias-status-select {
+  appearance: none;
+  border: 1px solid currentColor;
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+
+.ferias-status-select:hover { opacity: 0.8; }
+
+.ferias-status-select--status-pending-gestor {
+  background: rgba(234,179,8,.12);
+  color: #ca8a04;
+  border-color: rgba(202,138,4,.35);
+}
+
+.ferias-status-select--status-pending-rh {
+  background: rgba(139,92,246,.12);
+  color: #7c3aed;
+  border-color: rgba(124,58,237,.35);
+}
+
+.ferias-status-select--status-pending-fin {
+  background: rgba(37,99,235,.10);
+  color: var(--color-accent);
+  border-color: rgba(37,99,235,.35);
+}
+
+.ferias-status-select--status-aprovado {
+  background: rgba(22,163,74,.12);
+  color: #16a34a;
+  border-color: rgba(22,163,74,.35);
+}
+
+.ferias-status-select--status-recusado {
+  background: rgba(220,38,38,.10);
+  color: #dc2626;
+  border-color: rgba(220,38,38,.35);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 780px) {
+  .fmodal-body {
+    flex-direction: column;
+  }
+  .fmodal-col-right {
+    width: 100%;
+    border-top: 1px solid var(--color-border);
+    border-right: none;
+  }
+  .fcal-dual {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 500px) {
+  .ferias-selector-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ferias-analista-field {
+    flex: 1;
+  }
+}
