@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { UserCircle2, Settings, CalendarDays } from 'lucide-react';
+import { UserCircle2, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './ProfileMenu.css';
 
 export default function ProfileMenu({ onNavigate }) {
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, right: 0 });
   const btnRef  = useRef(null);
@@ -28,6 +30,11 @@ export default function ProfileMenu({ onNavigate }) {
     setOpen(o => !o);
   }
 
+  function handleLogout() {
+    setOpen(false);
+    logout();
+  }
+
   return (
     <>
       <button
@@ -35,7 +42,7 @@ export default function ProfileMenu({ onNavigate }) {
         className={`profile-btn${open ? ' is-open' : ''}`}
         onClick={handleOpen}
         aria-label="Perfil"
-        title="Perfil"
+        title={user?.nome || 'Perfil'}
       >
         <UserCircle2 size={18} />
       </button>
@@ -46,13 +53,28 @@ export default function ProfileMenu({ onNavigate }) {
           className="profile-dropdown"
           style={{ top: pos.top, right: pos.right }}
         >
-          <button className="profile-item" onClick={() => setOpen(false)}>
+          {user && (
+            <div className="profile-user-info">
+              <span className="profile-user-name">{user.nome}</span>
+              <span className="profile-user-email">{user.email}</span>
+            </div>
+          )}
+
+          <div className="profile-divider" />
+
+          <button
+            className="profile-item"
+            onClick={() => { setOpen(false); onNavigate?.('configuracoes'); }}
+          >
             <Settings size={14} />
             Configurações
           </button>
-          <button className="profile-item" onClick={() => { setOpen(false); onNavigate?.('calendario'); }}>
-            <CalendarDays size={14} />
-            Calendário
+
+          <div className="profile-divider" />
+
+          <button className="profile-item profile-item--logout" onClick={handleLogout}>
+            <LogOut size={14} />
+            Sair
           </button>
         </div>
       )}

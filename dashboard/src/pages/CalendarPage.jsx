@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Sun, Moon, ChevronDown } from 'lucide-react';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { api } from '../api/localClient.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import './CalendarPage.css';
 
 const MESES = [
@@ -11,7 +12,6 @@ const MESES = [
 const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 const ANO_ATUAL = new Date().getFullYear();
-// 1 ano anterior + atual + 14 posteriores = 16 anos no total
 const ANOS = Array.from({ length: 16 }, (_, i) => ANO_ATUAL - 1 + i);
 
 // ── Cálculo de Páscoa (algoritmo de Meeus/Jones/Butcher) ─────────────────────
@@ -40,20 +40,18 @@ function toISO(d) {
 // ── Feriados Municipais do Rio de Janeiro ─────────────────────────────────────
 function getRioMunicipalHolidays(year) {
   const easter = getEasterDate(year);
-
-  const carnavalTerca  = new Date(easter); carnavalTerca.setDate(easter.getDate() - 47);
+  const carnavalTerca   = new Date(easter); carnavalTerca.setDate(easter.getDate() - 47);
   const carnavalSegunda = new Date(easter); carnavalSegunda.setDate(easter.getDate() - 48);
 
   return [
     { date: `${year}-01-20`, name: 'São Sebastião — Padroeiro do Rio de Janeiro' },
-    { date: toISO(carnavalSegunda),  name: 'Segunda-feira de Carnaval' },
-    { date: toISO(carnavalTerca),   name: 'Terça-feira de Carnaval' },
+    { date: toISO(carnavalSegunda), name: 'Segunda-feira de Carnaval' },
+    { date: toISO(carnavalTerca),  name: 'Terça-feira de Carnaval' },
     { date: `${year}-04-23`, name: 'Dia de São Jorge' },
     { date: `${year}-12-08`, name: 'Nossa Senhora da Conceição' },
   ];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function getDaysInMonth(year, month)    { return new Date(year, month + 1, 0).getDate(); }
 function getFirstDayOfWeek(year, month) { return new Date(year, month, 1).getDay(); }
 
@@ -70,12 +68,10 @@ function MonthGrid({ year, month, holidays, municipalHolidays, pontoFacultativo,
   return (
     <div className="cal-month-card">
       <div className="cal-month-name">{MESES[month]}</div>
-
       <div className="cal-grid">
         {DIAS_SEMANA.map((d) => (
           <span key={d} className="cal-weekday">{d}</span>
         ))}
-
         {cells.map((day, i) => {
           if (!day) return <span key={i} className="cal-day cal-day--empty" />;
 
@@ -98,11 +94,11 @@ function MonthGrid({ year, month, holidays, municipalHolidays, pontoFacultativo,
               className={[
                 'cal-day',
                 'cal-day--clickable',
-                isToday     ? 'cal-day--today'       : '',
-                facultativo ? 'cal-day--facultativo'  : '',
-                !facultativo && holiday   ? 'cal-day--holiday'   : '',
-                !facultativo && municipal ? 'cal-day--municipal'  : '',
-                isWeekend   ? 'cal-day--weekend'      : '',
+                isToday     ? 'cal-day--today'      : '',
+                facultativo ? 'cal-day--facultativo' : '',
+                !facultativo && holiday   ? 'cal-day--holiday'  : '',
+                !facultativo && municipal ? 'cal-day--municipal' : '',
+                isWeekend   ? 'cal-day--weekend'     : '',
               ].filter(Boolean).join(' ')}
               title={
                 facultativo
@@ -144,23 +140,22 @@ function SaveModal({ onCancel, onConfirm }) {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
+// ── CalendarContent: painel reutilizável (sem header de página) ───────────────
+export const CalendarContent = forwardRef(function CalendarContent({ onSaved }, ref) {
+  const { can } = useAuth();
+  const canAdicionar = can('calendario', 'adicionar');
+
   const [ano, setAno]                   = useState(ANO_ATUAL);
   const [holidays, setHolidays]         = useState([]);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
   const [pontoFacultativo, setPontoFac] = useState(new Set());
-  // Map de iso → id do banco (estado salvo)
   const [savedPontoFac, setSavedPontoFac] = useState(new Map());
   const [showModal, setShowModal]       = useState(false);
-  const [saving, setSaving]             = useState(false);
   const [toastMsg, setToastMsg]         = useState(null);
 
-  // Feriados municipais calculados localmente (sem fetch)
   const municipalHolidays = useMemo(() => getRioMunicipalHolidays(ano), [ano]);
 
-  // Feriados nacionais via BrasilAPI
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -174,7 +169,6 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
       .finally(() => setLoading(false));
   }, [ano]);
 
-  // Carrega pontos facultativos salvos no banco ao mudar ano
   useEffect(() => {
     api.get(`/calendar/events?ano=${ano}`)
       .then((events) => {
@@ -183,18 +177,16 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
         setSavedPontoFac(savedMap);
         setPontoFac(new Set(savedMap.keys()));
       })
-      .catch(() => {
-        // falha silenciosa: não bloqueia o calendário
-      });
+      .catch(() => {});
   }, [ano]);
 
-  // Exibe toast por 3 segundos
   function showToast(msg) {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   }
 
   function togglePontoFac(iso) {
+    if (!canAdicionar) return;
     setPontoFac((prev) => {
       const next = new Set(prev);
       if (next.has(iso)) next.delete(iso);
@@ -202,6 +194,8 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
       return next;
     });
   }
+
+  useImperativeHandle(ref, () => ({ save: handleSaveClick }));
 
   function handleSaveClick() {
     const toAdd    = [...pontoFacultativo].filter((iso) => !savedPontoFac.has(iso));
@@ -217,7 +211,6 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
     const toAdd    = [...pontoFacultativo].filter((iso) => !savedPontoFac.has(iso));
     const toRemove = [...savedPontoFac.keys()].filter((iso) => !pontoFacultativo.has(iso));
 
-    setSaving(true);
     try {
       await Promise.all([
         ...toAdd.map((iso) =>
@@ -232,69 +225,37 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
         ),
       ]);
 
-      // Recarrega estado salvo do banco
       const events = await api.get(`/calendar/events?ano=${ano}`);
       const facultativos = events.filter((e) => e.tipo === 'ponto_facultativo');
       const newSavedMap = new Map(facultativos.map((e) => [e.data, e.id]));
       setSavedPontoFac(newSavedMap);
       setPontoFac(new Set(newSavedMap.keys()));
+      if (onSaved) onSaved();
+      else showToast('Alterações salvas com sucesso');
     } catch (err) {
       showToast(`Erro ao salvar: ${err.message}`);
     } finally {
-      setSaving(false);
       setShowModal(false);
     }
   }
 
   return (
-    <div className="calendar-page">
+    <>
+      {/* ── Controles do topo ──────────────────────────────────────── */}
+      <div className="cal-content-toolbar">
+        <div className="cal-year-select-wrap">
+          <select
+            className="cal-year-select"
+            value={ano}
+            onChange={(e) => setAno(Number(e.target.value))}
+          >
+            {ANOS.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <ChevronDown size={13} className="cal-year-chevron" />
+        </div>
 
-      {/* ── Sticky top ─────────────────────────────────────────────── */}
-      <div className="calendar-sticky-top">
-        <button
-          className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
-          onClick={onMenuToggle}
-          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
-        >
-          <span className="hamburger">
-            <span className="hamburger-line" />
-            <span className="hamburger-line" />
-            <span className="hamburger-line" />
-          </span>
-        </button>
-
-        <header className="calendar-header">
-          <div>
-            <h1 className="calendar-title">Calendário</h1>
-            <p className="calendar-subtitle">Feriados nacionais e municipais do Rio de Janeiro · {ano}</p>
-          </div>
-          <div className="calendar-header-right">
-
-            {/* ── Dropdown de anos ──────────────────────────────── */}
-            <div className="cal-year-select-wrap">
-              <select
-                className="cal-year-select"
-                value={ano}
-                onChange={(e) => setAno(Number(e.target.value))}
-              >
-                {ANOS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <ChevronDown size={13} className="cal-year-chevron" />
-            </div>
-
-            <button
-              className="theme-toggle-btn"
-              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-              aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
-              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <ProfileMenu onNavigate={onNavigate} />
-          </div>
-        </header>
       </div>
 
       {/* ── Legenda ────────────────────────────────────────────────── */}
@@ -338,23 +299,6 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
         ))}
       </div>
 
-      {/* ── Bottom bar fixa ────────────────────────────────────────── */}
-      <div className="calendar-sticky-bottom">
-        <button
-          className="cal-bottom-btn cal-bottom-btn--back"
-          onClick={() => onNavigate('home')}
-        >
-          Voltar
-        </button>
-        <button
-          className="cal-bottom-btn cal-bottom-btn--save"
-          onClick={handleSaveClick}
-          disabled={saving}
-        >
-          {saving ? 'Salvando…' : 'Salvar'}
-        </button>
-      </div>
-
       {/* ── Modal de confirmação ────────────────────────────────────── */}
       {showModal && (
         <SaveModal
@@ -367,6 +311,59 @@ export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, 
       {toastMsg && (
         <div className="cal-toast">{toastMsg}</div>
       )}
+    </>
+  );
+});
+
+// ── CalendarPage: page completa (header + painel + botão Voltar) ──────────────
+export default function CalendarPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
+  return (
+    <div className="calendar-page">
+
+      {/* ── Sticky top ─────────────────────────────────────────────── */}
+      <div className="calendar-sticky-top">
+        <button
+          className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
+          onClick={onMenuToggle}
+          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          <span className="hamburger">
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </span>
+        </button>
+
+        <header className="calendar-header">
+          <div>
+            <h1 className="calendar-title">Calendário</h1>
+            <p className="calendar-subtitle">Feriados nacionais e municipais do Rio de Janeiro</p>
+          </div>
+          <div className="calendar-header-right">
+            <button
+              className="theme-toggle-btn"
+              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <ProfileMenu onNavigate={onNavigate} />
+          </div>
+        </header>
+      </div>
+
+      <CalendarContent />
+
+      {/* ── Bottom bar fixa ────────────────────────────────────────── */}
+      <div className="calendar-sticky-bottom">
+        <button
+          className="cal-bottom-btn cal-bottom-btn--back"
+          onClick={() => onNavigate('home')}
+        >
+          Voltar
+        </button>
+      </div>
 
     </div>
   );

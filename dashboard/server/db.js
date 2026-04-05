@@ -4,10 +4,19 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const db = new Database(join(__dirname, 'data.db'));
+const db = new Database(process.env.DATABASE_PATH || join(__dirname, 'data.db'));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// Migrations – add columns to existing tables when the DB was created before them
+for (const sql of [
+  `ALTER TABLE ferias ADD COLUMN status       TEXT    DEFAULT 'Em Aprovação Gestor'`,
+  `ALTER TABLE ferias ADD COLUMN venda_ferias INTEGER DEFAULT 0`,
+  `ALTER TABLE ferias ADD COLUMN antecipar_13 INTEGER DEFAULT 0`,
+]) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS work_items (
@@ -47,14 +56,17 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS ferias (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    analista    TEXT NOT NULL,
-    equipe      TEXT,
-    data_inicio TEXT NOT NULL,
-    data_fim    TEXT NOT NULL,
-    tipo        TEXT NOT NULL,
-    observacao  TEXT,
-    criado_em   TEXT DEFAULT (datetime('now'))
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    analista     TEXT NOT NULL,
+    equipe       TEXT,
+    data_inicio  TEXT NOT NULL,
+    data_fim     TEXT NOT NULL,
+    tipo         TEXT NOT NULL,
+    observacao   TEXT,
+    status       TEXT DEFAULT 'Em Aprovação Gestor',
+    venda_ferias INTEGER DEFAULT 0,
+    antecipar_13 INTEGER DEFAULT 0,
+    criado_em    TEXT DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS calendar_events (
@@ -64,6 +76,16 @@ db.exec(`
     tipo      TEXT NOT NULL,
     descricao TEXT,
     criado_em TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome       TEXT    NOT NULL,
+    email      TEXT    NOT NULL UNIQUE,
+    senha_hash TEXT    NOT NULL,
+    papel      TEXT    NOT NULL DEFAULT 'viewer',
+    ativo      INTEGER NOT NULL DEFAULT 1,
+    criado_em  TEXT DEFAULT (datetime('now'))
   );
 `);
 
@@ -161,6 +183,47 @@ export function getItemCount() {
 
 export function getCacheTTLMinutes() {
   return CACHE_TTL_MS / 60_000;
+}
+
+// ── Operações de usuário ──────────────────────────────────────────────────────
+// Estas funções formam a camada de acesso a dados de usuários.
+// Para migrar para um banco de dados externo (online), basta criar um novo
+// módulo (ex.: cloudUserRepository.js) com as mesmas assinaturas e substituir
+// os imports nos arquivos de rota.
+
+export function getUserByEmail(email) {
+  return db.prepare('SELECT * FROM users WHERE email = ?').get(email) ?? null;
+}
+
+export function getUserById(id) {
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(id) ?? null;
+}
+
+export function listUsers() {
+  return db.prepare(
+    'SELECT id, nome, email, papel, ativo, criado_em FROM users ORDER BY nome COLLATE NOCASE',
+  ).all();
+}
+
+export function getUserCount() {
+  return db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
+}
+
+export function createUser({ nome, email, senhaHash, papel = 'viewer' }) {
+  const result = db
+    .prepare('INSERT INTO users (nome, email, senha_hash, papel) VALUES (?, ?, ?, ?)')
+    .run(nome, email, senhaHash, papel);
+  return result.lastInsertRowid;
+}
+
+export function updateUser(id, { nome, email, senhaHash, papel, ativo }) {
+  db.prepare(
+    'UPDATE users SET nome=?, email=?, senha_hash=?, papel=?, ativo=? WHERE id=?',
+  ).run(nome, email, senhaHash, papel, ativo, id);
+}
+
+export function deleteUser(id) {
+  db.prepare('DELETE FROM users WHERE id = ?').run(id);
 }
 
 export default db;

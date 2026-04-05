@@ -1,8 +1,22 @@
-import { useState } from 'react';
-import { BookOpen, BarChart3, Clock, CalendarRange, Umbrella, House, ChevronDown, LayoutDashboard, Users } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  BookOpen, BarChart3, Clock, CalendarRange, Umbrella,
+  House, ChevronDown, LayoutDashboard, Users, ShieldCheck,
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './Sidebar.css';
 
-const MODULES = [
+// Mapeamento de permissão por item de navegação
+const ITEM_PERMISSIONS = {
+  'casos-de-uso':  { modulo: 'dashboard',     acao: 'casos_de_uso' },
+  'analytics':     { modulo: 'dashboard',     acao: 'analytics' },
+  'timesheet':     { modulo: 'timesheet',     acao: 'acessar' },
+  'ferias':        { modulo: 'ferias',        acao: 'acessar' },
+  'dayoff':        { modulo: 'dayoff',        acao: 'acessar' },
+  'configuracoes': { modulo: 'configuracoes', acao: 'acessar' },
+};
+
+const ALL_MODULES = [
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -18,14 +32,45 @@ const MODULES = [
     label: 'Colaborador',
     icon: Users,
     items: [
-      { id: 'ferias', label: 'Férias',          icon: CalendarRange },
-      { id: 'dayoff', label: 'DayOff / Abonos', icon: Umbrella },
+      { id: 'ferias',    label: 'Férias',          icon: CalendarRange },
+      { id: 'dayoff',    label: 'DayOff / Abonos', icon: Umbrella },
+    ],
+  },
+  {
+    id: 'administracao',
+    label: 'Administração',
+    icon: ShieldCheck,
+    items: [
+      { id: 'configuracoes', label: 'Configurações', icon: ShieldCheck },
     ],
   },
 ];
 
 export default function Sidebar({ activePage, onNavigate, open, onClose }) {
-  const [openModules, setOpenModules] = useState({ dashboard: true, colaborador: false });
+  const { can } = useAuth();
+
+  // Filtra itens e módulos com base nas permissões do usuário
+  const modules = ALL_MODULES
+    .map(mod => ({
+      ...mod,
+      items: mod.items.filter(item => {
+        const perm = ITEM_PERMISSIONS[item.id];
+        return perm ? can(perm.modulo, perm.acao) : true;
+      }),
+    }))
+    .filter(mod => mod.items.length > 0);
+
+  const initialOpen = Object.fromEntries(modules.map(m => [m.id, false]));
+  const [openModules, setOpenModules] = useState(initialOpen);
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    if (!open || !panelRef.current) return;
+    const btn = document.querySelector('.app-menu-btn');
+    if (!btn) return;
+    const { left } = btn.getBoundingClientRect();
+    panelRef.current.style.left = `${left}px`;
+  }, [open]);
 
   function toggleModule(id) {
     setOpenModules(prev => ({ ...prev, [id]: !prev[id] }));
@@ -34,11 +79,6 @@ export default function Sidebar({ activePage, onNavigate, open, onClose }) {
   function handleNavigate(pageId) {
     onNavigate(pageId);
     onClose();
-    MODULES.forEach(mod => {
-      if (mod.items.some(item => item.id === pageId)) {
-        setOpenModules(prev => ({ ...prev, [mod.id]: true }));
-      }
-    });
   }
 
   return (
@@ -51,7 +91,7 @@ export default function Sidebar({ activePage, onNavigate, open, onClose }) {
       />
 
       {/* Floating panel */}
-      <aside className={`float-menu${open ? ' is-open' : ''}`} aria-label="Menu de navegação">
+      <aside ref={panelRef} className={`float-menu${open ? ' is-open' : ''}`} aria-label="Menu de navegação">
 
         {/* Início — topo */}
         <div className="float-top">
@@ -66,14 +106,14 @@ export default function Sidebar({ activePage, onNavigate, open, onClose }) {
 
         {/* Stacked modules */}
         <nav className="float-nav">
-          {MODULES.map(({ id, label, icon: ModIcon, items }) => {
-            const isOpen = openModules[id];
+          {modules.map(({ id, label, icon: ModIcon, items }) => {
+            const isOpen = openModules[id] ?? false;
+            const hasActive = items.some(item => item.id === activePage);
 
             return (
               <div key={id} className="float-module">
-                {/* Module header */}
                 <button
-                  className={`float-module-header${isOpen ? ' is-open' : ''}`}
+                  className={`float-module-header${isOpen ? ' is-open' : ''}${hasActive ? ' has-active' : ''}`}
                   onClick={() => toggleModule(id)}
                 >
                   <div className="float-module-icon-wrap">
@@ -83,7 +123,6 @@ export default function Sidebar({ activePage, onNavigate, open, onClose }) {
                   <ChevronDown size={14} className="float-module-chevron" />
                 </button>
 
-                {/* Sub-items */}
                 <div className={`float-module-items${isOpen ? ' is-open' : ''}`}>
                   {items.map(({ id: itemId, label: itemLabel, icon: Icon }) => (
                     <button

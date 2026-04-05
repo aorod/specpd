@@ -66,3 +66,38 @@
   background: var(--color-surface-2);
   color: var(--color-text-primary);
 }
+
+.profile-item--logout {
+  color: var(--color-er);
+}
+
+.profile-item--logout:hover {
+  background: var(--color-er-bg);
+  color: var(--color-er);
+}
+
+/* ─── User info block ────────────────────────────────────────── */
+.profile-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px 8px;
+}
+
+.profile-user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.profile-user-email {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+/* ─── Divider ────────────────────────────────────────────────── */
+.profile-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 2px 0;
+}

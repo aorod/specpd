@@ -1,4 +1,4 @@
-import { BarChart2, CalendarRange, ArrowRight } from 'lucide-react';
+import { BarChart2, CalendarRange, Settings2, ArrowRight } from 'lucide-react';
 import './HomePage.css';
 
 const MENU_ITEMS = [
@@ -15,6 +15,13 @@ const MENU_ITEMS = [
     description: 'Gerencie solicitações de férias e abonos da equipe',
     icon: CalendarRange,
     colorClass: 'info',
+  },
+  {
+    id: 'configuracoes',
+    label: 'Administração',
+    description: 'Gerencie usuários, permissões e configurações do sistema',
+    icon: Settings2,
+    colorClass: 'admin',
   },
 ];
 

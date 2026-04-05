@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Sun, Moon, Trash2, Pencil, X, Settings2,
   RotateCcw, ChevronLeft, ChevronRight, CalendarDays, Info, Check,
+  AlertTriangle,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
 import { ANALISTAS } from '../utils/nameAliases.js';
 import { EQUIPE_MAP } from '../utils/equipeList.js';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
@@ -101,6 +103,8 @@ function GearMenu({ onEditar, onRemover }) {
     setOpen(o => !o);
   }
 
+  if (!onEditar && !onRemover) return null;
+
   return (
     <div className="gear-root">
       <button ref={btnRef} className={`gear-btn${open ? ' is-open' : ''}`} onClick={handleOpen} title="Ações">
@@ -108,12 +112,16 @@ function GearMenu({ onEditar, onRemover }) {
       </button>
       {open && (
         <div ref={dropRef} className="gear-dropdown" style={{ top: pos.top, left: pos.left }}>
-          <button className="gear-item gear-item--edit" onClick={() => { onEditar(); setOpen(false); }}>
-            <Pencil size={13} />Editar
-          </button>
-          <button className="gear-item gear-item--remove" onClick={() => { onRemover(); setOpen(false); }}>
-            <Trash2 size={13} />Remover
-          </button>
+          {onEditar && (
+            <button className="gear-item gear-item--edit" onClick={() => { onEditar(); setOpen(false); }}>
+              <Pencil size={13} />Editar
+            </button>
+          )}
+          {onRemover && (
+            <button className="gear-item gear-item--remove" onClick={() => { onRemover(); setOpen(false); }}>
+              <Trash2 size={13} />Remover
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -201,6 +209,290 @@ function MonthCalendar({ year, month, displayStart, displayEnd, onDayClick, onDa
   );
 }
 
+// ── Gantt helpers ──────────────────────────────────────────────────────────────
+const DAY_PX = 28; // pixels per day in the Gantt
+
+const GANTT_EQUIPE_COLORS = [
+  '#2563eb', '#7c3aed', '#16a34a', '#ea580c',
+  '#0891b2', '#db2777', '#d97706', '#65a30d',
+];
+
+function computeOverlaps(registros) {
+  const byEquipe = {};
+  for (const r of registros) {
+    if (!byEquipe[r.equipe]) byEquipe[r.equipe] = [];
+    byEquipe[r.equipe].push(r);
+  }
+  const alerts = [];
+  for (const [equipe, recs] of Object.entries(byEquipe)) {
+    for (let i = 0; i < recs.length; i++) {
+      for (let j = i + 1; j < recs.length; j++) {
+        const r1 = recs[i], r2 = recs[j];
+        if (r1.analista === r2.analista) continue;
+        const oStart = r1.dataInicio > r2.dataInicio ? r1.dataInicio : r2.dataInicio;
+        const oEnd   = r1.dataFim   < r2.dataFim   ? r1.dataFim   : r2.dataFim;
+        if (oStart <= oEnd) {
+          alerts.push({
+            equipe,
+            analistas: [r1.analista, r2.analista],
+            oStart,
+            oEnd,
+            days: calcDiasCorridos(oStart, oEnd),
+          });
+        }
+      }
+    }
+  }
+  return alerts;
+}
+
+// ── GanttModal ─────────────────────────────────────────────────────────────────
+function GanttModal({ registros, onClose }) {
+  const [selectedEquipe, setSelectedEquipe] = useState('TODOS');
+
+  // All unique equipes derived from all registros (for the dropdown)
+  const allEquipes = useMemo(
+    () => [...new Set(registros.map(r => r.equipe))].sort(),
+    [registros],
+  );
+
+  // Registros filtered by the selected equipe
+  const filteredRegistros = useMemo(
+    () => selectedEquipe === 'TODOS' ? registros : registros.filter(r => r.equipe === selectedEquipe),
+    [registros, selectedEquipe],
+  );
+
+  const overlaps = useMemo(() => computeOverlaps(filteredRegistros), [filteredRegistros]);
+
+  // Drag-to-scroll
+  const scrollRef   = useRef(null);
+  const dragging    = useRef(false);
+  const dragStartX  = useRef(0);
+  const dragScrollL = useRef(0);
+
+  function onMouseDown(e) {
+    if (e.button !== 0) return;
+    dragging.current    = true;
+    dragStartX.current  = e.pageX;
+    dragScrollL.current = scrollRef.current.scrollLeft;
+    scrollRef.current.style.cursor = 'grabbing';
+    scrollRef.current.style.userSelect = 'none';
+  }
+  function onMouseMove(e) {
+    if (!dragging.current) return;
+    const dx = e.pageX - dragStartX.current;
+    scrollRef.current.scrollLeft = dragScrollL.current - dx;
+  }
+  function stopDrag() {
+    if (!dragging.current) return;
+    dragging.current = false;
+    scrollRef.current.style.cursor = 'grab';
+    scrollRef.current.style.userSelect = '';
+  }
+
+  // Keep color map stable across all equipes so colors don't shift when filtering
+  const equipeColor = useMemo(
+    () => Object.fromEntries(allEquipes.map((e, i) => [e, GANTT_EQUIPE_COLORS[i % GANTT_EQUIPE_COLORS.length]])),
+    [allEquipes],
+  );
+
+  // Equipes present in the current filtered set (for the legend)
+  const equipes = useMemo(() => [...new Set(filteredRegistros.map(r => r.equipe))], [filteredRegistros]);
+
+  // Group records by analyst (preserving insertion order)
+  const analystGroups = useMemo(() => {
+    const map = new Map();
+    for (const r of filteredRegistros) {
+      if (!map.has(r.analista)) {
+        map.set(r.analista, { analista: r.analista, equipe: r.equipe, records: [] });
+      }
+      map.get(r.analista).records.push(r);
+    }
+    return [...map.values()];
+  }, [filteredRegistros]);
+
+  const { timelineStart, totalDays, months } = useMemo(() => {
+    if (!filteredRegistros.length) return { timelineStart: null, totalDays: 0, months: [] };
+
+    const allDates = filteredRegistros.flatMap(r => [
+      new Date(r.dataInicio + 'T00:00:00'),
+      new Date(r.dataFim    + 'T00:00:00'),
+    ]);
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+    const start = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const end   = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+    const total = Math.floor((end - start) / 86400000) + 1;
+
+    const months = [];
+    let cur = new Date(start);
+    while (cur <= end) {
+      const mEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+      const days = Math.floor((mEnd - new Date(cur.getFullYear(), cur.getMonth(), 1)) / 86400000) + 1;
+      months.push({
+        label:   `${MESES_PT[cur.getMonth()].toUpperCase()} ${cur.getFullYear()}`,
+        days,
+        widthPx: days * DAY_PX,
+      });
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    }
+
+    return { timelineStart: start, totalDays: total, months };
+  }, [filteredRegistros]);
+
+  function barStyle(r) {
+    if (!timelineStart) return {};
+    const rStart    = new Date(r.dataInicio + 'T00:00:00');
+    const rEnd      = new Date(r.dataFim    + 'T00:00:00');
+    const leftDays  = Math.floor((rStart - timelineStart) / 86400000);
+    const widthDays = Math.floor((rEnd   - rStart)        / 86400000) + 1;
+    return {
+      left:       leftDays  * DAY_PX,
+      width:      widthDays * DAY_PX,
+      background: equipeColor[r.equipe],
+    };
+  }
+
+  const timelineWidthPx = totalDays * DAY_PX;
+
+  return (
+    <div className="gantt-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="gantt-panel">
+
+        {/* Header */}
+        <div className="gantt-header">
+          <div className="gantt-header-left">
+            <div className="fmodal-header-title">
+              <h2 className="fmodal-title">Acompanhamento das Férias</h2>
+              <div className="fmodal-title-bar" />
+            </div>
+            <select
+              className="gantt-equipe-select"
+              value={selectedEquipe}
+              onChange={e => setSelectedEquipe(e.target.value)}
+            >
+              <option value="TODOS">Todas as Equipes</option>
+              {allEquipes.map(e => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+          </div>
+          <button className="fmodal-close-btn" onClick={onClose}><X size={16} /></button>
+        </div>
+
+        {/* Overlap alerts */}
+        {overlaps.length > 0 && (
+          <div className="gantt-alerts">
+            {overlaps.map((o, i) => (
+              <div key={i} className="gantt-alert-item">
+                <AlertTriangle size={13} className="gantt-alert-icon" />
+                <span>
+                  <strong>[{o.equipe}]</strong>{' '}
+                  {o.analistas.join(' e ')} têm férias coincidentes:{' '}
+                  {formatDate(o.oStart)} – {formatDate(o.oEnd)}{' '}
+                  <strong>({o.days} {o.days === 1 ? 'dia' : 'dias'})</strong>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Gantt chart */}
+        <div className="gantt-body">
+          {analystGroups.length === 0 ? (
+            <div className="gantt-empty">Nenhum registro para exibir.</div>
+          ) : (
+            <div
+              className="gantt-scroll"
+              ref={scrollRef}
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={stopDrag}
+              onMouseLeave={stopDrag}
+              style={{ cursor: 'grab' }}
+            >
+              <div className="gantt-inner" style={{ minWidth: 200 + timelineWidthPx }}>
+
+                {/* Timeline header: month row + day row */}
+                <div className="gantt-tl-header">
+                  <div className="gantt-tl-label-spacer" />
+                  <div className="gantt-tl-right">
+                    {/* Month names */}
+                    <div className="gantt-months-row">
+                      {months.map((m, i) => (
+                        <div key={i} className="gantt-month-cell" style={{ width: m.widthPx }}>
+                          {m.label}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Day numbers */}
+                    <div className="gantt-days-row">
+                      {months.map((m, mi) =>
+                        Array.from({ length: m.days }, (_, d) => (
+                          <div key={`${mi}-${d}`} className="gantt-day-cell" style={{ width: DAY_PX }}>
+                            {d + 1}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data rows — one per unique analyst */}
+                {analystGroups.map(group => (
+                  <div key={group.analista} className="gantt-row">
+                    <div className="gantt-row-label">
+                      <span className="gantt-row-name">{group.analista}</span>
+                      <span
+                        className="gantt-row-equipe"
+                        style={{ color: equipeColor[group.equipe], borderColor: equipeColor[group.equipe] + '55' }}
+                      >
+                        {group.equipe}
+                      </span>
+                    </div>
+                    <div className="gantt-row-track" style={{ width: timelineWidthPx }}>
+                      {/* Month boundary dividers */}
+                      {months.map((m, i) => (
+                        <div key={i} className="gantt-track-col" style={{ width: m.widthPx }} />
+                      ))}
+                      {/* One bar per record */}
+                      {group.records.map(r => (
+                        <div
+                          key={r.id}
+                          className="gantt-bar"
+                          style={barStyle(r)}
+                          title={`${r.analista} · ${formatDate(r.dataInicio)} – ${formatDate(r.dataFim)} · ${calcDiasCorridos(r.dataInicio, r.dataFim)} dias`}
+                        >
+                          <span className="gantt-bar-text">
+                            {formatDate(r.dataInicio)} – {formatDate(r.dataFim)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Legend */}
+                <div className="gantt-legend">
+                  {equipes.map(e => (
+                    <div key={e} className="gantt-legend-item">
+                      <span className="gantt-legend-dot" style={{ background: equipeColor[e] }} />
+                      <span className="gantt-legend-label">{e}</span>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── SolicitarFeriasModal ───────────────────────────────────────────────────────
 function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, onClose, initialData, excludeId }) {
   const today    = new Date();
@@ -227,8 +519,8 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
   const [rangeStart,   setRangeStart]   = useState(initialData?.dataInicio ?? null);
   const [rangeEnd,     setRangeEnd]     = useState(initialData?.dataFim    ?? null);
   const [hoverDate,    setHoverDate]    = useState(null);
-  const [vendaFerias,  setVendaFerias]  = useState(false);
-  const [antecipar13,  setAntecipar13]  = useState(false);
+  const [vendaFerias,  setVendaFerias]  = useState(initialData?.vendaFerias ?? false);
+  const [antecipar13,  setAntecipar13]  = useState(initialData?.antecipar13 ?? false);
   const [justificativa, setJustificativa] = useState(initialData?.justificativa ?? '');
 
   const rightMonth    = calMonth === 11 ? 0  : calMonth + 1;
@@ -284,6 +576,23 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
     };
   }, [rangeStart, rangeEnd, diasCorridosSelecionados, saldo, saldoDisponivel, vendaFerias, registros, analistaAlias, todayStr]);
 
+  // Venda de férias: check if analyst already used it in the same year as the selected start
+  const vendaJaUsada = useMemo(() => {
+    const year = rangeStart
+      ? parseInt(rangeStart.split('-')[0])
+      : new Date().getFullYear();
+    return registros.some(r =>
+      r.analista === analistaAlias &&
+      r.id !== excludeId &&
+      r.vendaFerias === true &&
+      r.dataInicio.startsWith(String(year))
+    );
+  }, [rangeStart, registros, analistaAlias, excludeId]);
+
+  useEffect(() => {
+    if (vendaJaUsada) setVendaFerias(false);
+  }, [vendaJaUsada]);
+
   function handleDayClick(dateStr) {
     if (dateStr < minAllowedDate) return;
     if (!rangeStart || rangeEnd) {
@@ -316,7 +625,8 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
     await onSolicitar({ dataInicio: rangeStart, dataFim: rangeEnd, vendaFerias, antecipar13, justificativa });
   }
 
-  const canSubmit = rangeStart && rangeEnd && diasCorridosSelecionados > 0;
+  const canSubmit = rangeStart && rangeEnd && diasCorridosSelecionados > 0
+    && requirements !== null && Object.values(requirements).every(Boolean);
 
   return (
     <div className="fmodal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -369,7 +679,11 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
               <div className="fmodal-field-row">
                 <span className="fmodal-field-label">VENDA DE FÉRIAS</span>
                 <div className="fmodal-radio-group">
-                  <label className="fmodal-radio-label" onClick={() => setVendaFerias(true)}>
+                  <label
+                    className={`fmodal-radio-label${vendaJaUsada ? ' fmodal-radio-label--disabled' : ''}`}
+                    onClick={() => !vendaJaUsada && setVendaFerias(true)}
+                    title={vendaJaUsada ? 'Venda de férias já utilizada neste ano' : undefined}
+                  >
                     <span className={`fmodal-radio-circle${vendaFerias ? ' fmodal-radio-circle--light' : ''}`} />
                     Sim
                   </label>
@@ -378,6 +692,9 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
                     Não
                   </label>
                 </div>
+                {vendaJaUsada && (
+                  <span className="fmodal-venda-blocked">Já utilizada neste ano</span>
+                )}
               </div>
 
               <div className="fmodal-options-sep" />
@@ -520,8 +837,15 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
 
 // ── FeriasPage ─────────────────────────────────────────────────────────────────
 export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
+  const { can } = useAuth();
+  const canCriar   = can('ferias', 'criar');
+  const canEditar  = can('ferias', 'editar');
+  const canAprovar = can('ferias', 'aprovar');
+  const canCancelar = can('ferias', 'cancelar');
+
   const [analistaSelecionado, setAnalistaSelecionado] = useState('');
   const [modalOpen,     setModalOpen]     = useState(false);
+  const [ganttOpen,     setGanttOpen]     = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
 
   const { registros, loading, error, incluir, editar, remover } = useFerias();
@@ -532,25 +856,27 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
   const saldo = useMemo(() => {
     if (!modalAlias) return TOTAL_FERIAS_DIAS;
-    const used = registros
-      .filter(r => r.analista === modalAlias && r.id !== editingRecord?.id)
-      .reduce((sum, r) => sum + calcDiasCorridos(r.dataInicio, r.dataFim), 0);
-    return Math.max(0, TOTAL_FERIAS_DIAS - used);
+    const relevant = registros.filter(r => r.analista === modalAlias && r.id !== editingRecord?.id);
+    const used = relevant.reduce((sum, r) => sum + calcDiasCorridos(r.dataInicio, r.dataFim), 0);
+    const sold = relevant.filter(r => r.vendaFerias).length * 10;
+    return Math.max(0, TOTAL_FERIAS_DIAS - used - sold);
   }, [modalAlias, registros, editingRecord]);
 
-  async function handleSolicitar({ dataInicio, dataFim, justificativa }) {
+  async function handleSolicitar({ dataInicio, dataFim, vendaFerias, antecipar13, justificativa }) {
     if (editingRecord) {
       await editar(editingRecord.id, {
-        analista:  editingRecord.analista,
-        equipe:    editingRecord.equipe,
+        analista:    editingRecord.analista,
+        equipe:      editingRecord.equipe,
         dataInicio, dataFim,
-        tipo:      'Férias Programadas',
-        observacao: justificativa || null,
-        status:    editingRecord.status || STATUS_FERIAS[0],
+        tipo:        'Férias Programadas',
+        observacao:  justificativa || null,
+        status:      editingRecord.status || STATUS_FERIAS[0],
+        vendaFerias,
+        antecipar13,
       });
     } else {
       const equipe = EQUIPE_MAP[alias] || '—';
-      await incluir({ analista: alias, equipe, dataInicio, dataFim, tipo: 'Férias Programadas', observacao: justificativa || null, status: STATUS_FERIAS[0] });
+      await incluir({ analista: alias, equipe, dataInicio, dataFim, tipo: 'Férias Programadas', observacao: justificativa || null, status: STATUS_FERIAS[0], vendaFerias, antecipar13 });
     }
     setModalOpen(false);
     setEditingRecord(null);
@@ -632,14 +958,27 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
             </select>
           </div>
 
+          {canCriar && (
+            <div className="dayoff-field dayoff-field--btn">
+              <label className="dayoff-label">&nbsp;</label>
+              <button
+                className="ferias-solicitar-btn"
+                onClick={() => setModalOpen(true)}
+                disabled={!analistaSelecionado}
+              >
+                Solicitar Férias
+              </button>
+            </div>
+          )}
+
           <div className="dayoff-field dayoff-field--btn">
             <label className="dayoff-label">&nbsp;</label>
             <button
-              className="ferias-solicitar-btn"
-              onClick={() => setModalOpen(true)}
-              disabled={!analistaSelecionado}
+              className="ferias-gantt-btn"
+              onClick={() => setGanttOpen(true)}
+              disabled={registros.length === 0}
             >
-              Solicitar Férias
+              Acompanhamento das Férias
             </button>
           </div>
         </div>
@@ -691,14 +1030,18 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
                       <select
                         className={`ferias-status-select ferias-status-select--${STATUS_VARIANT[r.status] ?? 'status-pending-gestor'}`}
                         value={r.status || STATUS_FERIAS[0]}
-                        onChange={e => handleStatusChange(r, e.target.value)}
+                        onChange={e => canAprovar && handleStatusChange(r, e.target.value)}
+                        disabled={!canAprovar}
                       >
                         {STATUS_FERIAS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td className="dayoff-td--muted">{r.observacao || '—'}</td>
                     <td>
-                      <GearMenu onEditar={() => handleEditar(r)} onRemover={() => handleRemover(r.id)} />
+                      <GearMenu
+                        onEditar={canEditar   ? () => handleEditar(r)      : null}
+                        onRemover={canCancelar ? () => handleRemover(r.id) : null}
+                      />
                     </td>
                   </tr>
                 ))
@@ -707,6 +1050,11 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
           </table>
         </div>
       </div>
+
+      {/* Gantt Modal */}
+      {ganttOpen && (
+        <GanttModal registros={registros} onClose={() => setGanttOpen(false)} />
+      )}
 
       {/* Modal */}
       {modalOpen && (
@@ -720,6 +1068,8 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
             dataInicio:    editingRecord.dataInicio,
             dataFim:       editingRecord.dataFim,
             justificativa: editingRecord.observacao ?? '',
+            vendaFerias:   editingRecord.vendaFerias ?? false,
+            antecipar13:   editingRecord.antecipar13 ?? false,
           } : null}
           excludeId={editingRecord?.id}
         />

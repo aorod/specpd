@@ -88,6 +88,17 @@
   color: var(--color-info);
 }
 
+/* admin variant */
+.home-card--admin {
+  border-color: var(--color-border);
+}
+.home-card--admin:hover {
+  border-color: var(--color-warning, #e6a817);
+}
+.home-card--admin:hover .home-card-arrow {
+  color: var(--color-warning, #e6a817);
+}
+
 /* ─── Card icon ────────────────────────────────────────────────── */
 .home-card-icon {
   display: flex;
@@ -107,6 +118,11 @@
 .home-card-icon--info {
   background: var(--color-info-bg);
   color: var(--color-info);
+}
+
+.home-card-icon--admin {
+  background: color-mix(in srgb, var(--color-warning, #e6a817) 15%, transparent);
+  color: var(--color-warning, #e6a817);
 }
 
 /* ─── Card body ────────────────────────────────────────────────── */

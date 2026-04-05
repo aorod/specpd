@@ -17,7 +17,7 @@
 .float-menu {
   position: fixed;
   top: 80px;
-  left: 8px;
+  left: 0;
   width: 272px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -100,9 +100,14 @@
   color: var(--color-accent);
 }
 
-.float-module-header.is-open .float-module-icon-wrap {
+.float-module-header.is-open .float-module-icon-wrap,
+.float-module-header.has-active .float-module-icon-wrap {
   background: var(--color-accent-bg);
   border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.float-module-header.has-active .float-module-label {
   color: var(--color-accent);
 }
 

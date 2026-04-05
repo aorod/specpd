@@ -2,9 +2,12 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 import dayoffsRouter  from './routes/dayoffs.js';
 import feriasRouter   from './routes/ferias.js';
 import calendarRouter from './routes/calendar.js';
+import authRouter     from './routes/auth.js';
+import usersRouter    from './routes/users.js';
 import {
   isCacheValid,
   getCachedItems,
@@ -13,6 +16,8 @@ import {
   getLastSync,
   getItemCount,
   getCacheTTLMinutes,
+  getUserCount,
+  createUser,
 } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,6 +28,8 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
+app.use('/api/auth',    authRouter);
+app.use('/api/users',   usersRouter);
 app.use('/api/dayoffs',  dayoffsRouter);
 app.use('/api/ferias',   feriasRouter);
 app.use('/api/calendar', calendarRouter);
@@ -193,6 +200,25 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
+// ── Seed: cria admin padrão se não houver nenhum usuário ─────────────────────
+async function seedDefaultAdmin() {
+  if (getUserCount() > 0) return;
+
+  const DEFAULT_EMAIL = 'admin@specpd.com';
+  const DEFAULT_SENHA = 'Admin@1234';
+
+  const senhaHash = await bcrypt.hash(DEFAULT_SENHA, 10);
+  createUser({ nome: 'Administrador', email: DEFAULT_EMAIL, senhaHash, papel: 'admin' });
+
+  console.log('\n╔══════════════════════════════════════════════════╗');
+  console.log('║  Usuário administrador criado automaticamente    ║');
+  console.log(`║  E-mail: ${DEFAULT_EMAIL.padEnd(40)}║`);
+  console.log(`║  Senha:  ${DEFAULT_SENHA.padEnd(40)}║`);
+  console.log('║  ⚠  Altere a senha após o primeiro acesso!      ║');
+  console.log('╚══════════════════════════════════════════════════╝\n');
+}
+
+app.listen(PORT, async () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+  await seedDefaultAdmin();
 });

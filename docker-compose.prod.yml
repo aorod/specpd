@@ -1,0 +1,21 @@
+# Ambiente de PRODUÇÃO — build otimizado, frontend servido pelo Express
+# Uso: docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+  app:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - db_data:/data                       # persiste o SQLite fora do container
+    env_file:
+      - ./dashboard/server/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /data/data.db          # caminho do SQLite no volume
+
+volumes:
+  db_data:

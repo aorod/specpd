@@ -87,6 +87,38 @@
   color: var(--color-text-muted);
 }
 
+/* ─── Content toolbar (year + save inline) ───────────────────── */
+.cal-content-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cal-save-inline-btn {
+  height: 32px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  transition: opacity 150ms;
+}
+
+.cal-save-inline-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.cal-save-inline-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ─── Legend ─────────────────────────────────────────────────── */
 .cal-legend {
   display: flex;

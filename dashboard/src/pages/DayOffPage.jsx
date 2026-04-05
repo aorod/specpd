@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Plus, Trash2, Pencil, Check, X, Settings2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function GearMenu({ onEditar, onRemover }) {
   const [open, setOpen] = useState(false);
@@ -27,6 +28,8 @@ function GearMenu({ onEditar, onRemover }) {
     setOpen(o => !o);
   }
 
+  if (!onEditar && !onRemover) return null;
+
   return (
     <div className="gear-root">
       <button
@@ -43,14 +46,18 @@ function GearMenu({ onEditar, onRemover }) {
           className="gear-dropdown"
           style={{ top: pos.top, left: pos.left }}
         >
-          <button className="gear-item gear-item--edit" onClick={() => { onEditar(); setOpen(false); }}>
-            <Pencil size={13} />
-            Editar
-          </button>
-          <button className="gear-item gear-item--remove" onClick={() => { onRemover(); setOpen(false); }}>
-            <Trash2 size={13} />
-            Remover
-          </button>
+          {onEditar && (
+            <button className="gear-item gear-item--edit" onClick={() => { onEditar(); setOpen(false); }}>
+              <Pencil size={13} />
+              Editar
+            </button>
+          )}
+          {onRemover && (
+            <button className="gear-item gear-item--remove" onClick={() => { onRemover(); setOpen(false); }}>
+              <Trash2 size={13} />
+              Remover
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -67,6 +74,11 @@ import './DayOffPage.css';
 const TIPOS_ABONO = ['Atestado', 'Day Off'];
 
 export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
+  const { can } = useAuth();
+  const canCriar  = can('dayoff', 'criar');
+  const canEditar  = can('dayoff', 'editar');
+  const canExcluir = can('dayoff', 'excluir');
+
   // Form state
   const [analista, setAnalista]     = useState('');
   const [dataInicio, setDataInicio] = useState('');
@@ -185,7 +197,7 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
       </div>
 
       {/* ── Formulário ─────────────────────────────────────────────── */}
-      <div className="dayoff-form-card">
+      {canCriar && <div className="dayoff-form-card">
         <div className="dayoff-form-row">
 
           <div className="dayoff-field">
@@ -238,7 +250,7 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
           </div>
 
         </div>
-      </div>
+      </div>}
 
       {/* ── Grid ───────────────────────────────────────────────────── */}
       <div className="dayoff-grid-card">
@@ -368,7 +380,10 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                         </span>
                       </td>
                       <td>
-                        <GearMenu onEditar={() => handleEditar(r)} onRemover={() => handleRemover(r.id)} />
+                        <GearMenu
+                        onEditar={canEditar  ? () => handleEditar(r)      : null}
+                        onRemover={canExcluir ? () => handleRemover(r.id) : null}
+                      />
                       </td>
                     </tr>
                   );

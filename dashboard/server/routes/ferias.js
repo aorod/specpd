@@ -5,14 +5,17 @@ const router = Router();
 
 function toItem(row) {
   return {
-    id:         row.id,
-    analista:   row.analista,
-    equipe:     row.equipe,
-    dataInicio: row.data_inicio,
-    dataFim:    row.data_fim,
-    tipo:       row.tipo,
-    observacao: row.observacao,
-    criadoEm:   row.criado_em,
+    id:          row.id,
+    analista:    row.analista,
+    equipe:      row.equipe,
+    dataInicio:  row.data_inicio,
+    dataFim:     row.data_fim,
+    tipo:        row.tipo,
+    observacao:  row.observacao,
+    status:      row.status ?? 'Em Aprovação Gestor',
+    vendaFerias: row.venda_ferias === 1,
+    antecipar13: row.antecipar_13 === 1,
+    criadoEm:    row.criado_em,
   };
 }
 
@@ -24,27 +27,27 @@ router.get('/', (_req, res) => {
 
 // POST /api/ferias
 router.post('/', (req, res) => {
-  const { analista, equipe, dataInicio, dataFim, tipo, observacao } = req.body;
+  const { analista, equipe, dataInicio, dataFim, tipo, observacao, status, vendaFerias, antecipar13 } = req.body;
   if (!analista || !dataInicio || !dataFim || !tipo) {
     return res.status(400).json({ error: 'Campos obrigatórios faltando' });
   }
   const result = db.prepare(
-    'INSERT INTO ferias (analista, equipe, data_inicio, data_fim, tipo, observacao) VALUES (?, ?, ?, ?, ?, ?)',
-  ).run(analista, equipe ?? '', dataInicio, dataFim, tipo, observacao ?? null);
+    'INSERT INTO ferias (analista, equipe, data_inicio, data_fim, tipo, observacao, status, venda_ferias, antecipar_13) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ).run(analista, equipe ?? '', dataInicio, dataFim, tipo, observacao ?? null, status ?? 'Em Aprovação Gestor', vendaFerias ? 1 : 0, antecipar13 ? 1 : 0);
   const row = db.prepare('SELECT * FROM ferias WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(toItem(row));
 });
 
 // PUT /api/ferias/:id
 router.put('/:id', (req, res) => {
-  const { analista, equipe, dataInicio, dataFim, tipo, observacao } = req.body;
+  const { analista, equipe, dataInicio, dataFim, tipo, observacao, status, vendaFerias, antecipar13 } = req.body;
   const { id } = req.params;
   if (!analista || !dataInicio || !dataFim || !tipo) {
     return res.status(400).json({ error: 'Campos obrigatórios faltando' });
   }
   const result = db.prepare(
-    'UPDATE ferias SET analista=?, equipe=?, data_inicio=?, data_fim=?, tipo=?, observacao=? WHERE id=?',
-  ).run(analista, equipe ?? '', dataInicio, dataFim, tipo, observacao ?? null, id);
+    'UPDATE ferias SET analista=?, equipe=?, data_inicio=?, data_fim=?, tipo=?, observacao=?, status=?, venda_ferias=?, antecipar_13=? WHERE id=?',
+  ).run(analista, equipe ?? '', dataInicio, dataFim, tipo, observacao ?? null, status ?? 'Em Aprovação Gestor', vendaFerias ? 1 : 0, antecipar13 ? 1 : 0, id);
   if (!result.changes) return res.status(404).json({ error: 'Registro não encontrado' });
   const row = db.prepare('SELECT * FROM ferias WHERE id = ?').get(id);
   res.json(toItem(row));
