@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import './style.css';
+import './index.css';
 import { useAuth } from './context/AuthContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import Sidebar from './components/sidebar/Sidebar.jsx';
@@ -32,6 +32,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Garante que ao fazer logout (ou ao fazer login como outro usuário)
+  // o usuário sempre começa na home
+  useEffect(() => {
+    if (!user) setActivePage('home');
+  }, [user]);
 
   // Aguarda validação do token
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }} />;

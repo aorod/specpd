@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import './ProfileMenu.css';
 
 export default function ProfileMenu({ onNavigate }) {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, right: 0 });
   const btnRef  = useRef(null);
@@ -62,15 +62,19 @@ export default function ProfileMenu({ onNavigate }) {
 
           <div className="profile-divider" />
 
-          <button
-            className="profile-item"
-            onClick={() => { setOpen(false); onNavigate?.('configuracoes'); }}
-          >
-            <Settings size={14} />
-            Configurações
-          </button>
+          {can('configuracoes', 'acessar') && (
+            <>
+              <button
+                className="profile-item"
+                onClick={() => { setOpen(false); onNavigate?.('configuracoes'); }}
+              >
+                <Settings size={14} />
+                Configurações
+              </button>
 
-          <div className="profile-divider" />
+              <div className="profile-divider" />
+            </>
+          )}
 
           <button className="profile-item profile-item--logout" onClick={handleLogout}>
             <LogOut size={14} />

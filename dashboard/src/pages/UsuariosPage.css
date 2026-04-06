@@ -723,6 +723,10 @@
   margin-top: 4px;
 }
 
+.umodal-card--sm .umodal-actions {
+  justify-content: center;
+}
+
 .umodal-btn {
   display: flex;
   align-items: center;

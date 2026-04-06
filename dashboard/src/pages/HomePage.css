@@ -10,6 +10,14 @@
   background: var(--color-bg);
 }
 
+/* ─── Topbar (profile menu) ────────────────────────────────────── */
+.home-topbar {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 100;
+}
+
 /* ─── Header ───────────────────────────────────────────────────── */
 .home-header {
   display: flex;

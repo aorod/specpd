@@ -107,3 +107,26 @@ export const MODULOS = [
 export function hasPermission(papel, modulo, acao) {
   return (PERMISSOES_PERFIL[papel]?.[modulo] ?? []).includes(acao);
 }
+
+// ── Permissões individuais por usuário (localStorage) ──────────────────────────
+const USER_PERMS_KEY = 'specpd_perms';
+
+/**
+ * Carrega as permissões customizadas de um usuário salvas no localStorage.
+ * Retorna null se não houver override definido para o usuário.
+ */
+export function loadUserPermissions(userId) {
+  try {
+    const raw = localStorage.getItem(`${USER_PERMS_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persiste as permissões customizadas de um usuário no localStorage.
+ */
+export function saveUserPermissions(userId, perms) {
+  localStorage.setItem(`${USER_PERMS_KEY}_${userId}`, JSON.stringify(perms));
+}

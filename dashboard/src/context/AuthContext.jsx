@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { hasPermission } from '../utils/permissions.js';
+import { hasPermission, loadUserPermissions } from '../utils/permissions.js';
 
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'specpd_token';
 
 export function AuthProvider({ children }) {
-  const [user, setUser]     = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [userPerms, setUserPerms] = useState(null);
 
   // Valida o token salvo ao carregar a aplicação
   useEffect(() => {
@@ -19,6 +20,15 @@ export function AuthProvider({ children }) {
       .then(u => { setUser(u); setLoading(false); })
       .catch(() => { setUser(null); setLoading(false); });
   }, []);
+
+  // Carrega permissões customizadas sempre que o usuário muda
+  useEffect(() => {
+    if (user?.id) {
+      setUserPerms(loadUserPermissions(user.id));
+    } else {
+      setUserPerms(null);
+    }
+  }, [user?.id]);
 
   function login(token, userData) {
     localStorage.setItem(TOKEN_KEY, token);
@@ -32,11 +42,21 @@ export function AuthProvider({ children }) {
 
   function can(modulo, acao) {
     if (!user) return false;
+    if (userPerms) {
+      return (userPerms[modulo] ?? []).includes(acao);
+    }
     return hasPermission(user.papel, modulo, acao);
   }
 
+  // Recarrega as permissões customizadas do usuário atual do localStorage
+  function refreshPermissions() {
+    if (user?.id) {
+      setUserPerms(loadUserPermissions(user.id));
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, can }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, can, refreshPermissions }}>
       {children}
     </AuthContext.Provider>
   );

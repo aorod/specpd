@@ -7,7 +7,7 @@ import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { CalendarContent } from './CalendarPage.jsx';
 import { listUsers, createUser, updateUser, deleteUser } from '../api/authClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { PERMISSOES_PERFIL, ACOES_POR_MODULO, MODULOS } from '../utils/permissions.js';
+import { PERMISSOES_PERFIL, ACOES_POR_MODULO, MODULOS, loadUserPermissions, saveUserPermissions } from '../utils/permissions.js';
 import './ConfiguracoesPage.css';
 import './UsuariosPage.css';
 
@@ -310,11 +310,16 @@ function GearMenu({ onEditar, onPermissoes, onRemover }) {
 
 // ── Modal: Gerenciar Permissões ───────────────────────────────────────────────
 function PermissoesModal({ user, onClose }) {
-  const [perms, setPerms] = useState(() =>
-    Object.fromEntries(
+  const { user: currentUser, refreshPermissions } = useAuth();
+
+  const [perms, setPerms] = useState(() => {
+    // Usa permissões customizadas salvas se existirem, senão usa o padrão do perfil
+    const custom = loadUserPermissions(user.id);
+    if (custom) return custom;
+    return Object.fromEntries(
       MODULOS.map(({ key }) => [key, [...(PERMISSOES_PERFIL[user.papel]?.[key] || [])]])
-    )
-  );
+    );
+  });
   const [moduloAtivo, setModuloAtivo] = useState(MODULOS[0].key);
   const [phase, setPhase] = useState('edit'); // 'edit' | 'confirm' | 'success'
 
@@ -326,6 +331,15 @@ function PermissoesModal({ user, onClose }) {
         [modKey]: cur.includes(acoKey) ? cur.filter(k => k !== acoKey) : [...cur, acoKey],
       };
     });
+  }
+
+  function handleConfirm() {
+    saveUserPermissions(user.id, perms);
+    // Se o usuário editado for o usuário logado, atualiza as permissões na sessão
+    if (currentUser?.id === user.id) {
+      refreshPermissions();
+    }
+    setPhase('success');
   }
 
   if (phase === 'success') {
@@ -340,7 +354,7 @@ function PermissoesModal({ user, onClose }) {
             As permissões de <strong>{user.nome}</strong> foram atualizadas com sucesso.
           </p>
           <div className="umodal-actions">
-            <button className="umodal-btn umodal-btn--save" style={{ flex: 1 }} onClick={onClose}>
+            <button className="umodal-btn umodal-btn--save" onClick={onClose}>
               OK
             </button>
           </div>
@@ -363,7 +377,7 @@ function PermissoesModal({ user, onClose }) {
           </p>
           <div className="umodal-actions">
             <button className="umodal-btn umodal-btn--cancel" onClick={() => setPhase('edit')}>Cancelar</button>
-            <button className="umodal-btn umodal-btn--save" onClick={() => setPhase('success')}>
+            <button className="umodal-btn umodal-btn--save" onClick={handleConfirm}>
               <Check size={14} />Confirmar
             </button>
           </div>
