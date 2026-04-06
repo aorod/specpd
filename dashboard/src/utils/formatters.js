@@ -36,6 +36,20 @@ export function pct(value, total) {
 }
 
 /**
+ * Formata horas no padrão brasileiro (ponto como milhar, vírgula como decimal).
+ * Ex.: 3392.1  → "3.392,1"
+ *      179.3   → "179,3"
+ *      2269    → "2.269"
+ *      8       → "8"
+ * @param {number|null} value
+ * @returns {string}
+ */
+export function formatHoras(value) {
+  if (value == null || isNaN(value)) return '—';
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+/**
  * Trunca uma string adicionando reticências se ultrapassar maxLen.
  * @param {string} str
  * @param {number} maxLen

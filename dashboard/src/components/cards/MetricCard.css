@@ -36,6 +36,11 @@
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
+.metric-card--info:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -76,6 +81,11 @@
   color: #9ca3af;
 }
 
+.metric-card--info .metric-card-icon {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
 .metric-card-body {
   display: flex;
   flex-direction: column;
@@ -102,6 +112,13 @@
   font-size: 0.78rem;
   color: var(--color-text-muted);
   margin-top: 2px;
+}
+
+.metric-card-suffix {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-left: 3px;
+  color: var(--color-text-secondary);
 }
 
 /* Pin button */

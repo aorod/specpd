@@ -217,6 +217,9 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
     },
   }));
 
+  const hpd = parseFloat(horasPorDia);
+  const hpdValido = !isNaN(hpd) && hpd > 0;
+
   return (
     <div className="cfg-panel">
       <div className="cfg-panel-header">
@@ -245,6 +248,39 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
               placeholder="8"
             />
           </div>
+
+          {hpdValido && (
+            <div className="cfg-dias-table-wrap">
+              <p className="cfg-dias-table-label">
+                Tabela de referência — horas acumuladas por dia trabalhado
+              </p>
+              <div className="cfg-dias-table-scroll">
+                <table className="cfg-dias-table">
+                  <thead>
+                    <tr>
+                      <th>Dias</th>
+                      <th>Cálculo</th>
+                      <th>Total de Horas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
+                      const total = parseFloat((d * hpd).toFixed(2));
+                      return (
+                        <tr key={d}>
+                          <td className="cfg-dias-td-day">{d} {d === 1 ? 'dia' : 'dias'}</td>
+                          <td className="cfg-dias-td-calc">
+                            {d} × {horasPorDia}
+                          </td>
+                          <td className="cfg-dias-td-total">{total} h</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

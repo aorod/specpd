@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
-import { formatMesLabel } from '../../utils/formatters.js';
+import { formatMesLabel, formatHoras } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
 import { useSort } from '../../hooks/useSort.js';
 import './TimesheetTable.css';
@@ -125,7 +125,7 @@ export default function TimesheetTable({ data }) {
                     <td>{aliasName(item.assignedTo)}</td>
                     <td>{item.equipe || '—'}</td>
                     <td>{item.atividade || '—'}</td>
-                    <td className="cell-effort">{item.effort != null ? item.effort : '—'}</td>
+                    <td className="cell-effort">{item.effort != null ? formatHoras(item.effort) : '—'}</td>
                     <td>
                       <span className={`state-badge state-badge--${item.state.toLowerCase().replace(/\s+/g, '-')}`}>
                         {item.state}

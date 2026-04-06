@@ -270,6 +270,16 @@
   color: #fff;
 }
 
+/* Radio style (single-select) */
+.filter-option-box--radio {
+  border-radius: 50%;
+}
+
+.filter-option.is-checked .filter-option-box--radio {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .filter-option-label {
   flex: 1;
   white-space: nowrap;

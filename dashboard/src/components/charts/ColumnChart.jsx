@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Users, ArrowDownUp } from 'lucide-react';
 import { aliasName } from '../../utils/nameAliases.js';
+import { formatHoras } from '../../utils/formatters.js';
 import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
@@ -98,7 +99,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
                   fontWeight="600"
                   fill="var(--color-text-muted)"
                 >
-                  {total}
+                  {formatHoras(total)}
                 </text>
 
                 {/* Label abaixo da barra */}
@@ -122,7 +123,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
         {tooltip && (
           <div className="chart-tooltip">
             <span className="chart-tooltip-label">{aliasName(tooltip.key)}</span>
-            <span>{tooltipLabel}: <strong>{tooltip.total}</strong></span>
+            <span>{tooltipLabel}: <strong>{formatHoras(tooltip.total)}</strong></span>
           </div>
         )}
       </div>

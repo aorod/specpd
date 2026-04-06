@@ -47,10 +47,15 @@ export function useTimesheetFilters(data) {
     }));
   };
 
+  // Substitui a seleção inteira por um único valor (single-select)
+  const setSingleFilter = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: [value] }));
+  };
+
   const clearFilters = () => setFilters(INITIAL_FILTERS_TS);
 
   const isActive = Object.values(filters).some((arr) => arr.length > 0);
   const activeCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
 
-  return { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount };
+  return { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, isActive, activeCount };
 }

@@ -26,7 +26,7 @@ function filterExcluding(data, filters, excludeKey) {
   });
 }
 
-function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
+function FilterDropdown({ label, options, selected, onToggle, formatLabel, single = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -37,6 +37,11 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  function handleOption(opt) {
+    onToggle(opt);
+    if (single) setOpen(false); // fecha após escolha no modo single
+  }
 
   return (
     <div className="filter-dropdown" ref={ref}>
@@ -63,11 +68,11 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
               <button
                 key={opt}
                 className={`filter-option${checked ? ' is-checked' : ''}`}
-                onClick={() => onToggle(opt)}
-                role="checkbox"
+                onClick={() => handleOption(opt)}
+                role={single ? 'radio' : 'checkbox'}
                 aria-checked={checked}
               >
-                <span className="filter-option-box">
+                <span className={`filter-option-box${single ? ' filter-option-box--radio' : ''}`}>
                   {checked && <Check size={9} strokeWidth={3} />}
                 </span>
                 <span className="filter-option-label">
@@ -82,7 +87,7 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   );
 }
 
-export default function TimesheetFilterBar({ data, filters, toggleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
+export default function TimesheetFilterBar({ data, filters, toggleFilter, setSingleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
   const options = useMemo(() => {
     const anos         = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
     const meses        = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
@@ -154,8 +159,9 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, clearF
           label="Mês"
           options={options.meses}
           selected={filters.meses}
-          onToggle={(v) => toggleFilter('meses', v)}
+          onToggle={(v) => setSingleFilter('meses', v)}
           formatLabel={formatMesLabel}
+          single
         />
         <FilterDropdown
           label="Ano"

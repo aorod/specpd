@@ -30,8 +30,9 @@ function useCountUp(target, duration = 600) {
   return count;
 }
 
-export default function MetricCard({ icon: Icon, label, value, detail, accent, pinned, onTogglePin }) {
-  const animated = useCountUp(value);
+export default function MetricCard({ icon: Icon, label, value, detail, accent, pinned, onTogglePin, suffix }) {
+  const isString = typeof value === 'string';
+  const animated = useCountUp(isString ? 0 : value);
 
   return (
     <div className={`metric-card metric-card--${accent}`}>
@@ -40,7 +41,10 @@ export default function MetricCard({ icon: Icon, label, value, detail, accent, p
       </div>
       <div className="metric-card-body">
         <span className="metric-card-label">{label}</span>
-        <span className="metric-card-value">{animated}</span>
+        <span className="metric-card-value">
+          {isString ? value : animated}
+          {!isString && suffix && <span className="metric-card-suffix">{suffix}</span>}
+        </span>
         {detail != null && (
           <span className="metric-card-detail">{detail}</span>
         )}

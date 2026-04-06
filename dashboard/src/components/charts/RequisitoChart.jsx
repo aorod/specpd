@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Users, ArrowDownUp } from 'lucide-react';
 import { aliasName } from '../../utils/nameAliases.js';
+import { formatHoras } from '../../utils/formatters.js';
 import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
@@ -82,7 +83,7 @@ export default function RequisitoChart({ data, forceCollapsed, title = 'Requisit
                   fill="var(--color-text-muted)"
                   fontWeight="600"
                 >
-                  {total}
+                  {formatHoras(total)}
                 </text>
               </g>
             );
@@ -92,7 +93,7 @@ export default function RequisitoChart({ data, forceCollapsed, title = 'Requisit
         {tooltip && (
           <div className="chart-tooltip">
             <span className="chart-tooltip-label">{aliasName(tooltip.requisito)}</span>
-            <span>{tooltipLabel}: <strong>{tooltip.total}</strong></span>
+            <span>{tooltipLabel}: <strong>{formatHoras(tooltip.total)}</strong></span>
           </div>
         )}
       </div>

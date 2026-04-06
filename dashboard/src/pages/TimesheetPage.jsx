@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { ClipboardList, Clock, FileCheck, FileMinus, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
+import { CalendarClock, Clock, TrendingDown, CalendarCheck, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
+import { formatHoras } from '../utils/formatters.js';
 import { useTimesheetData } from '../hooks/useTimesheetData.js';
 import { useTimesheetFilters } from '../hooks/useTimesheetFilters.js';
 import { useTimesheetMetrics } from '../hooks/useTimesheetMetrics.js';
+import { useWorkdaysCalc } from '../hooks/useWorkdaysCalc.js';
 import MetricCard from '../components/cards/MetricCard.jsx';
 import TimesheetFilterBar from '../components/filters/TimesheetFilterBar.jsx';
 import StatusDonutChart from '../components/charts/StatusDonutChart.jsx';
@@ -14,7 +16,7 @@ import './UseCasePage.css';
 
 export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useTimesheetData();
-  const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useTimesheetFilters(rawData);
+  const { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, isActive, activeCount } = useTimesheetFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
@@ -27,6 +29,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   }, [filteredData, search]);
 
   const metrics = useTimesheetMetrics(displayData);
+  const { diasUteis, totalHorasMes } = useWorkdaysCalc(filters);
 
   const porResponsavelHoras = useMemo(() => {
     const map = new Map();
@@ -47,11 +50,49 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   const togglePin = (id) =>
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
+  const numAnalistas        = metrics.porResponsavel.size;
+  const totalHorasMesEquipe = parseFloat((totalHorasMes * Math.max(numAnalistas, 1)).toFixed(2));
+  const totalHorasRealizadas = parseFloat(metrics.totalEffort.toFixed(2));
+  const totalHorasFaltantes  = parseFloat((totalHorasMesEquipe - totalHorasRealizadas).toFixed(2));
+  const pctConcluido = totalHorasMesEquipe > 0
+    ? parseFloat(((totalHorasRealizadas / totalHorasMesEquipe) * 100).toFixed(1))
+    : 0;
+
+  const analLabel = numAnalistas === 1 ? '1 analista' : `${numAnalistas} analistas`;
+
   const cardDefs = [
-    { id: 'total',    icon: ClipboardList, label: 'Total de Timesheets', value: metrics.totalTimesheets, detail: null,                                    accent: 'neutral' },
-    { id: 'effort',   icon: Clock,         label: 'Total de Horas',      value: parseFloat(metrics.totalEffort.toFixed(1)), detail: 'horas registradas', accent: 'muted' },
-    { id: 'comAtiv',  icon: FileCheck,     label: 'Com Atividade',       value: metrics.comAtividade,    detail: `${metrics.pctComAtividade}% do total`, accent: 'success' },
-    { id: 'semAtiv',  icon: FileMinus,     label: 'Sem Atividade',       value: metrics.semAtividade,    detail: `${metrics.pctSemAtividade}% do total`, accent: 'warning' },
+    {
+      id:     'horasMes',
+      icon:   CalendarClock,
+      label:  'Total Horas/Mês',
+      value:  formatHoras(totalHorasMesEquipe),
+      detail: diasUteis > 0 ? `${diasUteis} dias úteis · ${analLabel}` : 'calculando…',
+      accent: 'neutral',
+    },
+    {
+      id:     'horasRealizadas',
+      icon:   Clock,
+      label:  'Total Horas Realizadas',
+      value:  formatHoras(totalHorasRealizadas),
+      detail: 'horas registradas',
+      accent: 'success',
+    },
+    {
+      id:     'horasFaltantes',
+      icon:   TrendingDown,
+      label:  'Total Horas Faltantes',
+      value:  formatHoras(-totalHorasFaltantes),
+      detail: totalHorasMesEquipe > 0 ? `${pctConcluido}% concluído` : null,
+      accent: totalHorasFaltantes > 0 ? 'er' : 'success',
+    },
+    {
+      id:     'fechamento',
+      icon:   CalendarCheck,
+      label:  'Fechamento Dia e Data',
+      value:  '--',
+      detail: null,
+      accent: 'info',
+    },
   ];
 
   const pinnedDefs   = cardDefs.filter((c) => pinnedCards.includes(c.id));
@@ -125,6 +166,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
                 data={rawData}
                 filters={filters}
                 toggleFilter={toggleFilter}
+                setSingleFilter={setSingleFilter}
                 clearFilters={clearFilters}
                 isActive={isActive}
                 search={search}
