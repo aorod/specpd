@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 're
 import {
   Sun, Moon, Calculator, CalendarDays, Users,
   Plus, X, Check, Trash2, Pencil, ShieldCheck, Eye, UserCog, Search, Settings2, SlidersHorizontal, ChevronDown,
+  Upload, FileSpreadsheet, FileText, AlertCircle, Loader2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import { TIPOS_ARQUIVO, validarArquivo } from '../utils/importAnalistas.js';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { CalendarContent } from './CalendarPage.jsx';
 import { listUsers, createUser, updateUser, deleteUser } from '../api/authClient.js';
@@ -197,8 +200,36 @@ function ConfirmDelete({ user, onClose, onConfirmed }) {
   );
 }
 
+// ── Paginação (reutilizada da TimesheetTable) ─────────────────────────────────
+const PAGE_SIZES_ANALISTAS = [5, 10, 25, 50];
+const MAX_PAGE_BTNS_A = 9;
+
+function PageWindowA({ safePage, totalPages, onPageChange }) {
+  const half = Math.floor(MAX_PAGE_BTNS_A / 2);
+  let winStart = Math.max(1, safePage - half);
+  let winEnd   = Math.min(totalPages, winStart + MAX_PAGE_BTNS_A - 1);
+  if (winEnd - winStart + 1 < MAX_PAGE_BTNS_A) {
+    winStart = Math.max(1, winEnd - MAX_PAGE_BTNS_A + 1);
+  }
+  const pages = Array.from({ length: winEnd - winStart + 1 }, (_, i) => winStart + i);
+  return (
+    <>
+      {pages.map(p => (
+        <button
+          key={p}
+          className={`pagination-btn pagination-page-btn${p === safePage ? ' pagination-page-btn--active' : ''}`}
+          onClick={() => onPageChange(p)}
+          aria-current={p === safePage ? 'page' : undefined}
+        >
+          {p}
+        </button>
+      ))}
+    </>
+  );
+}
+
 // ── Modal: Criar / Editar Analista ────────────────────────────────────────────
-function AnalistaModal({ analista, onClose, onSaved }) {
+function AnalistaModal({ analista, analistas, onClose, onSaved }) {
   const isEdit = !!analista?.id;
   const [nome,   setNome]   = useState(analista?.nome   || '');
   const [equipe, setEquipe] = useState(analista?.equipe || '');
@@ -208,6 +239,14 @@ function AnalistaModal({ analista, onClose, onSaved }) {
   function handleSave(e) {
     e.preventDefault();
     if (!nome.trim()) { setError('Nome é obrigatório'); return; }
+    if (!isEdit) {
+      const nomeLower = nome.trim().toLowerCase();
+      const duplicado = (analistas || []).find(a => a.nome.toLowerCase() === nomeLower);
+      if (duplicado) {
+        setError(`Analista "${duplicado.nome}" já está cadastrado.`);
+        return;
+      }
+    }
     onSaved({ id: analista?.id ?? Date.now(), nome: nome.trim(), equipe: equipe.trim(), ativo });
   }
 
@@ -225,7 +264,12 @@ function AnalistaModal({ analista, onClose, onSaved }) {
           </div>
           <div className="umodal-field">
             <label className="umodal-label">Equipe</label>
-            <input className="umodal-input" value={equipe} onChange={e => setEquipe(e.target.value)} placeholder="Nome da equipe" />
+            <select className="umodal-input" value={equipe} onChange={e => setEquipe(e.target.value)}>
+              <option value="">Selecione a equipe</option>
+              <option value="E&D">E&amp;D</option>
+              <option value="PM&A">PM&amp;A</option>
+              <option value="QA">QA</option>
+            </select>
           </div>
           {isEdit && (
             <div className="umodal-field umodal-field--row">
@@ -245,7 +289,7 @@ function AnalistaModal({ analista, onClose, onSaved }) {
             <button type="button" className="umodal-btn umodal-btn--cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="umodal-btn umodal-btn--save">
               <Check size={14} />
-              {isEdit ? 'Salvar Alterações' : 'Criar Analista'}
+              {isEdit ? 'Salvar Alterações' : 'Incluir Analista'}
             </button>
           </div>
         </form>
@@ -278,6 +322,233 @@ function ConfirmDeleteAnalista({ analista, onClose, onConfirmed }) {
   );
 }
 
+// ── Modal: Importar Analistas ─────────────────────────────────────────────────
+function ImportAnalistasModal({ onClose, onImported, analistas }) {
+  const [tipoKey,      setTipoKey]      = useState(null);       // 'xls' | 'pdf'
+  const [arquivo,      setArquivo]      = useState(null);
+  const [erroArquivo,  setErroArquivo]  = useState('');
+  const [fase,         setFase]         = useState('form');     // 'form' | 'loading' | 'preview' | 'erro'
+  const [erroImport,   setErroImport]   = useState('');
+  const [resultados,   setResultados]   = useState([]);
+  const fileInputRef = useRef(null);
+
+  const existentesSet = new Set((analistas || []).map(a => a.nome.toLowerCase()));
+  const novos      = resultados.filter(r => !existentesSet.has(r.nome.toLowerCase()));
+  const duplicatas = resultados.filter(r =>  existentesSet.has(r.nome.toLowerCase()));
+
+  function handleTipo(key) {
+    setTipoKey(key);
+    setArquivo(null);
+    setErroArquivo('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleFileChange(e) {
+    const f = e.target.files?.[0] || null;
+    setArquivo(f);
+    setErroArquivo(f ? (validarArquivo(f, tipoKey) || '') : '');
+  }
+
+  async function handleAnalisar() {
+    if (!arquivo || erroArquivo) return;
+    setFase('loading');
+    setErroImport('');
+    try {
+      const cfg  = TIPOS_ARQUIVO[tipoKey];
+      const data = await cfg.parser(arquivo);
+      setResultados(data);
+      setFase('preview');
+    } catch (err) {
+      setErroImport(err.message || 'Erro ao processar o arquivo.');
+      setFase('erro');
+    }
+  }
+
+  function handleConfirmar() {
+    onImported(novos);
+    onClose();
+  }
+
+  const podeAnalisar = tipoKey && arquivo && !erroArquivo;
+
+  return (
+    <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget && fase !== 'loading') onClose(); }}>
+      <div className="umodal-card imp-modal">
+
+        {/* Header */}
+        <div className="umodal-header">
+          <h2 className="umodal-title">Importar Analistas</h2>
+          {fase !== 'loading' && (
+            <button className="umodal-close" onClick={onClose}><X size={16} /></button>
+          )}
+        </div>
+
+        {/* ── FASE: form ── */}
+        {(fase === 'form' || fase === 'erro') && (
+          <div className="umodal-form">
+
+            {/* Tipo de arquivo */}
+            <div className="umodal-field">
+              <label className="umodal-label">Tipo de arquivo</label>
+              <div className="imp-tipo-grid">
+                <button
+                  type="button"
+                  className={`imp-tipo-btn${tipoKey === 'xls' ? ' is-selected' : ''}`}
+                  onClick={() => handleTipo('xls')}
+                >
+                  <FileSpreadsheet size={22} />
+                  <span>XLS / XLSX</span>
+                  <span className="imp-tipo-ext">.xls · .xlsx</span>
+                </button>
+                <button
+                  type="button"
+                  className={`imp-tipo-btn${tipoKey === 'pdf' ? ' is-selected' : ''}`}
+                  onClick={() => handleTipo('pdf')}
+                >
+                  <FileText size={22} />
+                  <span>PDF</span>
+                  <span className="imp-tipo-ext">.pdf</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Seletor de arquivo */}
+            {tipoKey && (
+              <div className="umodal-field">
+                <label className="umodal-label">Selecionar arquivo</label>
+                <p className="imp-hint">
+                  O arquivo deve conter as colunas <strong>Analista</strong> e <strong>Equipe</strong>.
+                </p>
+                <div className="imp-file-row">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={TIPOS_ARQUIVO[tipoKey].accept}
+                    onChange={handleFileChange}
+                    className="imp-file-input"
+                    id="imp-file"
+                  />
+                  <label htmlFor="imp-file" className="imp-file-label">
+                    <Upload size={14} />
+                    Escolher arquivo
+                  </label>
+                  {arquivo && (
+                    <span className="imp-file-name" title={arquivo.name}>
+                      {arquivo.name}
+                      <span className="imp-file-size">
+                        ({(arquivo.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </span>
+                  )}
+                </div>
+                {erroArquivo && (
+                  <div className="imp-error-row">
+                    <AlertCircle size={13} />
+                    {erroArquivo}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Erro de importação */}
+            {fase === 'erro' && erroImport && (
+              <div className="imp-error-block">
+                <AlertCircle size={14} />
+                <span>{erroImport}</span>
+              </div>
+            )}
+
+            <div className="umodal-actions">
+              <button type="button" className="umodal-btn umodal-btn--cancel" onClick={onClose}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="umodal-btn umodal-btn--save"
+                onClick={handleAnalisar}
+                disabled={!podeAnalisar}
+              >
+                <Upload size={14} />
+                Analisar arquivo
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── FASE: loading ── */}
+        {fase === 'loading' && (
+          <div className="imp-loading">
+            <Loader2 size={28} className="imp-spinner" />
+            <p className="imp-loading-text">Processando arquivo…</p>
+          </div>
+        )}
+
+        {/* ── FASE: preview ── */}
+        {fase === 'preview' && (
+          <div className="umodal-form">
+            <div className="imp-preview-header">
+              <Check size={16} className="imp-preview-check" />
+              <span>
+                <strong>{novos.length}</strong> {novos.length === 1 ? 'analista será incluído' : 'analistas serão incluídos'}
+                {duplicatas.length > 0 && (
+                  <span className="imp-preview-dup-count">
+                    {' '}· <strong>{duplicatas.length}</strong> {duplicatas.length === 1 ? 'duplicata ignorada' : 'duplicatas ignoradas'}
+                  </span>
+                )}
+              </span>
+            </div>
+            {duplicatas.length > 0 && (
+              <div className="imp-dup-alert">
+                <AlertCircle size={13} />
+                <span>
+                  Os seguintes nomes já estão cadastrados e serão ignorados:{' '}
+                  <strong>{duplicatas.map(d => d.nome).join(', ')}</strong>
+                </span>
+              </div>
+            )}
+            <div className="imp-preview-scroll">
+              <table className="imp-preview-table">
+                <thead>
+                  <tr>
+                    <th>Analista</th>
+                    <th>Equipe</th>
+                    <th>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultados.map((r, i) => {
+                    const isDup = existentesSet.has(r.nome.toLowerCase());
+                    return (
+                      <tr key={i} className={isDup ? 'imp-row--duplicata' : ''}>
+                        <td>{r.nome}</td>
+                        <td>{r.equipe || '—'}</td>
+                        <td>{isDup
+                          ? <span className="imp-tag--dup">Já cadastrado</span>
+                          : <span className="imp-tag--new">Novo</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="umodal-actions">
+              <button type="button" className="umodal-btn umodal-btn--cancel" onClick={() => setFase('form')}>
+                Voltar
+              </button>
+              <button type="button" className="umodal-btn umodal-btn--save" onClick={handleConfirmar} disabled={novos.length === 0}>
+                <Check size={14} />
+                Confirmar importação{novos.length > 0 ? ` (${novos.length})` : ''}
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
 // ── Painel: Parâmetros Gerais ───────────────────────────────────────────────
 const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
   const storageKey = 'config_horas_por_dia';
@@ -292,12 +563,22 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
     try { return JSON.parse(localStorage.getItem(analistasKey) || '[]'); }
     catch { return []; }
   });
-  const [filterNomeA,   setFilterNomeA]   = useState('');
-  const [analistaModal, setAnalistaModal] = useState(null);
+  const [filterNomeA,     setFilterNomeA]     = useState('');
+  const [analistaModal,   setAnalistaModal]   = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [pageA,     setPageA]     = useState(1);
+  const [pageSizeA, setPageSizeA] = useState(5);
 
   const filteredAnalistas = analistas.filter(a =>
     !filterNomeA.trim() || a.nome.toLowerCase().includes(filterNomeA.trim().toLowerCase())
   );
+
+  const totalPagesA = Math.max(1, Math.ceil(filteredAnalistas.length / pageSizeA));
+  const safePageA   = Math.min(pageA, totalPagesA);
+  const startA      = (safePageA - 1) * pageSizeA;
+  const pagedAnalistas = filteredAnalistas.slice(startA, startA + pageSizeA);
+  const fromA = filteredAnalistas.length === 0 ? 0 : startA + 1;
+  const toA   = Math.min(startA + pageSizeA, filteredAnalistas.length);
 
   function persistAnalistas(list) {
     localStorage.setItem(analistasKey, JSON.stringify(list));
@@ -313,6 +594,10 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
   function handleAnalistaDeleted(id) {
     persistAnalistas(analistas.filter(a => a.id !== id));
     setAnalistaModal(null);
+  }
+
+  function handleImported(novos) {
+    persistAnalistas([...analistas, ...novos]);
   }
 
   // ── Horas por dia ──────────────────────────────────────────────────────────
@@ -425,10 +710,14 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
                   className="cfg-input cfg-input--filter cfg-input--search"
                   placeholder="Filtrar por nome..."
                   value={filterNomeA}
-                  onChange={e => setFilterNomeA(e.target.value)}
+                  onChange={e => { setFilterNomeA(e.target.value); setPageA(1); }}
                 />
               </div>
             </div>
+            <button className="cfg-criar-btn cfg-criar-btn--outline" onClick={() => setShowImportModal(true)}>
+              <Upload size={14} />
+              Importar Analistas
+            </button>
             <button className="cfg-criar-btn" onClick={() => setAnalistaModal({ type: 'add' })}>
               <Plus size={14} />
               Novo Analista
@@ -450,7 +739,7 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
                   <tr>
                     <td colSpan={4} className="cfg-usuarios-empty">Nenhum analista cadastrado.</td>
                   </tr>
-                ) : filteredAnalistas.map(a => (
+                ) : pagedAnalistas.map(a => (
                   <tr key={a.id}>
                     <td>{a.nome}</td>
                     <td className="cfg-usuarios-td-email">{a.equipe || '—'}</td>
@@ -472,13 +761,53 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
                 ))}
               </tbody>
             </table>
+
+            {/* ── Paginação ── */}
+            <div className="uc-pagination">
+              <span className="pagination-info">
+                {filteredAnalistas.length > 0 ? `${fromA}–${toA} de ${filteredAnalistas.length} itens` : '0 itens'}
+              </span>
+              <div className="pagination-center">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPageA(p => Math.max(1, p - 1))}
+                  disabled={safePageA === 1}
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <PageWindowA safePage={safePageA} totalPages={totalPagesA} onPageChange={setPageA} />
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPageA(p => Math.min(totalPagesA, p + 1))}
+                  disabled={safePageA === totalPagesA}
+                  aria-label="Próxima página"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+              <div className="pagination-right">
+                <span className="page-size-label">Por página</span>
+                <select
+                  className="page-size-select"
+                  value={pageSizeA}
+                  onChange={e => { setPageSizeA(Number(e.target.value)); setPageA(1); }}
+                  aria-label="Itens por página"
+                >
+                  {PAGE_SIZES_ANALISTAS.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
           </div>
         </div>
 
       </div>
 
       {analistaModal?.type === 'add' && (
-        <AnalistaModal analista={null} onClose={() => setAnalistaModal(null)} onSaved={handleAnalistaSaved} />
+        <AnalistaModal analista={null} analistas={analistas} onClose={() => setAnalistaModal(null)} onSaved={handleAnalistaSaved} />
       )}
       {analistaModal?.type === 'edit' && (
         <AnalistaModal analista={analistaModal.analista} onClose={() => setAnalistaModal(null)} onSaved={handleAnalistaSaved} />
@@ -488,6 +817,13 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
           analista={analistaModal.analista}
           onClose={() => setAnalistaModal(null)}
           onConfirmed={() => handleAnalistaDeleted(analistaModal.analista.id)}
+        />
+      )}
+      {showImportModal && (
+        <ImportAnalistasModal
+          onClose={() => setShowImportModal(false)}
+          onImported={handleImported}
+          analistas={analistas}
         />
       )}
     </div>

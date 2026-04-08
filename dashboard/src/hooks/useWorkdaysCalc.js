@@ -102,5 +102,5 @@ export function useWorkdaysCalc(filters) {
     };
   }, [anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, horasPorDia]);
 
-  return { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje };
+  return { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje, nationalByAno, pontoFacDates, anosEfetivos, mesesEfetivos };
 }

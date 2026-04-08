@@ -46,7 +46,7 @@ export function pct(value, total) {
  */
 export function formatHoras(value) {
   if (value == null || isNaN(value)) return '—';
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**

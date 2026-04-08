@@ -5,6 +5,10 @@ import { useTimesheetData } from '../hooks/useTimesheetData.js';
 import { useTimesheetFilters } from '../hooks/useTimesheetFilters.js';
 import { useTimesheetMetrics } from '../hooks/useTimesheetMetrics.js';
 import { useWorkdaysCalc } from '../hooks/useWorkdaysCalc.js';
+import { useDayOffs } from '../hooks/useDayOffs.js';
+import { useFerias } from '../hooks/useFerias.js';
+import { aliasName } from '../utils/nameAliases.js';
+import { calcDiasUteisNoIntervalo } from '../utils/calcDiasUteis.js';
 import MetricCard from '../components/cards/MetricCard.jsx';
 import TimesheetFilterBar from '../components/filters/TimesheetFilterBar.jsx';
 import StatusDonutChart from '../components/charts/StatusDonutChart.jsx';
@@ -29,12 +33,14 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   }, [filteredData, search]);
 
   const metrics = useTimesheetMetrics(displayData);
-  const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje } = useWorkdaysCalc(filters);
+  const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje, nationalByAno, pontoFacDates, anosEfetivos, mesesEfetivos } = useWorkdaysCalc(filters);
+  const { registros: dayoffs } = useDayOffs();
+  const { registros: ferias } = useFerias();
 
   const porResponsavelHoras = useMemo(() => {
     const map = new Map();
     for (const [key, val] of metrics.porResponsavel.entries()) {
-      map.set(key, { total: parseFloat(val.totalEffort.toFixed(1)) });
+      map.set(key, { total: parseFloat(val.totalEffort.toFixed(2)) });
     }
     return map;
   }, [metrics.porResponsavel]);
@@ -42,10 +48,64 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   const porAtividadeHoras = useMemo(() => {
     const map = new Map();
     for (const [key, val] of metrics.porAtividade.entries()) {
-      map.set(key, { total: parseFloat(val.totalEffort.toFixed(1)) });
+      map.set(key, { total: parseFloat(val.totalEffort.toFixed(2)) });
     }
     return map;
   }, [metrics.porAtividade]);
+
+  // ── Meta por Analista (considerando DayOffs e Férias) ───────────────────────
+  const metaAnalistaLines = useMemo(() => {
+    const hoje        = new Date();
+    const currentYear = hoje.getFullYear();
+    const currentMes  = hoje.getMonth() + 1;
+    const currentDay  = hoje.getDate();
+
+    const metaMesMap = new Map(); // key (fullName) → metaHoras do mês
+    const metaDiaMap = new Map(); // key (fullName) → metaHoras até hoje
+
+    for (const [key] of porResponsavelHoras) {
+      const alias = aliasName(key);
+      let deductedMes    = 0;
+      let deductedAteHoj = 0;
+
+      for (const ano of anosEfetivos) {
+        const anoNum       = parseInt(ano, 10);
+        const nationalDates = nationalByAno[ano] ?? [];
+
+        for (const mes of mesesEfetivos) {
+          const mesNum  = parseInt(mes, 10);
+          const isPast  = anoNum < currentYear || (anoNum === currentYear && mesNum < currentMes);
+          const isCurr  = anoNum === currentYear && mesNum === currentMes;
+
+          const deductRange = (inicio, fim) => {
+            deductedMes += calcDiasUteisNoIntervalo(inicio, fim, anoNum, mesNum, nationalDates, pontoFacDates);
+            if (isPast) {
+              deductedAteHoj += calcDiasUteisNoIntervalo(inicio, fim, anoNum, mesNum, nationalDates, pontoFacDates);
+            } else if (isCurr) {
+              deductedAteHoj += calcDiasUteisNoIntervalo(inicio, fim, anoNum, mesNum, nationalDates, pontoFacDates, currentDay);
+            }
+          };
+
+          for (const d of dayoffs) {
+            if (d.analista !== alias) continue;
+            deductRange(d.dataInicio, d.dataFim);
+          }
+          for (const f of ferias) {
+            if (f.analista !== alias) continue;
+            if (f.status?.startsWith('Recusado')) continue; // ignorar férias recusadas
+            deductRange(f.dataInicio, f.dataFim);
+          }
+        }
+      }
+
+      const diasMes = Math.max(0, diasUteis - deductedMes);
+      const diasHoj = Math.max(0, diasUteisAteHoje - deductedAteHoj);
+      metaMesMap.set(key, parseFloat((diasMes * horasPorDia).toFixed(2)));
+      metaDiaMap.set(key, parseFloat((diasHoj * horasPorDia).toFixed(2)));
+    }
+
+    return { metaMesMap, metaDiaMap };
+  }, [porResponsavelHoras, dayoffs, ferias, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, diasUteis, diasUteisAteHoje, horasPorDia]);
 
   const togglePin = (id) =>
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
@@ -55,12 +115,12 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   const totalHorasRealizadas = parseFloat(metrics.totalEffort.toFixed(2));
   const totalHorasFaltantes  = parseFloat((totalHorasMesEquipe - totalHorasRealizadas).toFixed(2));
   const pctConcluido = totalHorasMesEquipe > 0
-    ? parseFloat(((totalHorasRealizadas / totalHorasMesEquipe) * 100).toFixed(1))
+    ? parseFloat(((totalHorasRealizadas / totalHorasMesEquipe) * 100).toFixed(2))
     : 0;
 
   const analLabel = numAnalistas === 1 ? '1 analista' : `${numAnalistas} analistas`;
 
-  const totalHorasFechamento = parseFloat((diasUteisAteHoje * horasPorDia).toFixed(1));
+  const totalHorasFechamento = parseFloat((diasUteisAteHoje * horasPorDia).toFixed(2));
   const hoje = new Date();
   const hojeFormatado = hoje.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -237,7 +297,27 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
 
           <section className="charts-grid" aria-label="Gráficos">
             <div style={{ gridColumn: '1 / -1' }}>
-              <ColumnChart data={porResponsavelHoras} forceCollapsed={chartsCollapsed} title="Analistas" tooltipLabel="Total de horas" />
+              <ColumnChart
+                data={porResponsavelHoras}
+                forceCollapsed={chartsCollapsed}
+                title="Analistas"
+                tooltipLabel="Total de horas"
+                perColumnLines={[
+                  {
+                    // Meta do Mês individual: (diasUteis - dayoffs - férias) × horasPorDia
+                    values: metaAnalistaLines.metaMesMap,
+                    color: '#3b82f6',
+                    label: 'Meta do Mês',
+                  },
+                  ...(diasUteisAteHoje > 0 ? [{
+                    // Meta do Dia individual: (diasUteisAteHoje - dayoffs - férias até hoje) × horasPorDia
+                    values: metaAnalistaLines.metaDiaMap,
+                    color: '#22c55e',
+                    label: 'Meta do Dia',
+                    showLabels: false,
+                  }] : []),
+                ]}
+              />
             </div>
             <StatusDonutChart data={metrics.porStatus} forceCollapsed={chartsCollapsed} />
             <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />
