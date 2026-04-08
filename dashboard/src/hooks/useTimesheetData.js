@@ -10,7 +10,16 @@ export function useTimesheetData() {
   const [error, setError]     = useState(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  const retry = useCallback(() => setRetryCount((n) => n + 1), []);
+  const retry = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await fetch('/api/sync', { method: 'POST' });
+    } catch {
+      // se o sync falhar, ainda tenta buscar o cache
+    }
+    setRetryCount((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
