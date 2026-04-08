@@ -71,3 +71,33 @@ export function calcDiasUteis(ano, mes, nationalHolidayDates = [], pontoFacDates
 
   return count;
 }
+
+/**
+ * Conta dias úteis do dia 1 até `diaLimite` (inclusive) no mês/ano dados.
+ * Dias não úteis em `diaLimite` simplesmente não são contados (mantém o valor do último dia útil anterior).
+ *
+ * @param {number}   ano
+ * @param {number}   mes                 1-based
+ * @param {number}   diaLimite           dia do mês até onde contar (1-based)
+ * @param {string[]} nationalHolidayDates
+ * @param {string[]} pontoFacDates
+ * @returns {number}
+ */
+export function calcDiasUteisAteData(ano, mes, diaLimite, nationalHolidayDates = [], pontoFacDates = []) {
+  const nationalSet  = new Set(nationalHolidayDates);
+  const municipalSet = new Set(getRioMunicipalHolidayDates(ano));
+  const pontoFacSet  = new Set(pontoFacDates);
+  let count = 0;
+
+  for (let d = 1; d <= diaLimite; d++) {
+    const dow = new Date(ano, mes - 1, d).getDay();
+    if (dow === 0 || dow === 6) continue;
+
+    const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (nationalSet.has(iso) || municipalSet.has(iso) || pontoFacSet.has(iso)) continue;
+
+    count++;
+  }
+
+  return count;
+}

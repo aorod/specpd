@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/localClient.js';
-import { calcDiasUteis } from '../utils/calcDiasUteis.js';
+import { calcDiasUteis, calcDiasUteisAteData } from '../utils/calcDiasUteis.js';
 
 /**
  * Calcula dias úteis e total de horas/mês para os filtros de ano/mês selecionados.
@@ -66,24 +66,41 @@ export function useWorkdaysCalc(filters) {
   }, [anosKey]);
 
   // ── Cálculo principal ────────────────────────────────────────────────────────
-  const { diasUteis, totalHorasMes } = useMemo(() => {
+  const { diasUteis, totalHorasMes, diasUteisAteHoje } = useMemo(() => {
+    const hoje = new Date();
+    const currentYear  = hoje.getFullYear();
+    const currentMonth = hoje.getMonth() + 1;
+    const currentDay   = hoje.getDate();
+
     let totalDias = 0;
+    let totalDiasAteHoje = 0;
 
     for (const ano of anosEfetivos) {
-      const anoNum      = parseInt(ano, 10);
+      const anoNum        = parseInt(ano, 10);
       const nationalDates = nationalByAno[ano] ?? [];
 
       for (const mes of mesesEfetivos) {
-        const mesNum = parseInt(mes, 10);
-        totalDias += calcDiasUteis(anoNum, mesNum, nationalDates, pontoFacDates);
+        const mesNum  = parseInt(mes, 10);
+        const diasMes = calcDiasUteis(anoNum, mesNum, nationalDates, pontoFacDates);
+        totalDias += diasMes;
+
+        if (anoNum < currentYear || (anoNum === currentYear && mesNum < currentMonth)) {
+          // Mês passado: conta todos os dias úteis
+          totalDiasAteHoje += diasMes;
+        } else if (anoNum === currentYear && mesNum === currentMonth) {
+          // Mês atual: conta do dia 1 até hoje
+          totalDiasAteHoje += calcDiasUteisAteData(anoNum, mesNum, currentDay, nationalDates, pontoFacDates);
+        }
+        // Mês futuro: não conta
       }
     }
 
     return {
-      diasUteis:     totalDias,
-      totalHorasMes: parseFloat((totalDias * horasPorDia).toFixed(1)),
+      diasUteis:        totalDias,
+      totalHorasMes:    parseFloat((totalDias * horasPorDia).toFixed(1)),
+      diasUteisAteHoje: totalDiasAteHoje,
     };
   }, [anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, horasPorDia]);
 
-  return { horasPorDia, diasUteis, totalHorasMes };
+  return { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje };
 }

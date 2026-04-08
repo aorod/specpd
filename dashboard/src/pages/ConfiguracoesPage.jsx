@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   Sun, Moon, Calculator, CalendarDays, Users,
-  Plus, X, Check, Trash2, Pencil, ShieldCheck, Eye, UserCog, Search, Settings2,
+  Plus, X, Check, Trash2, Pencil, ShieldCheck, Eye, UserCog, Search, Settings2, SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { CalendarContent } from './CalendarPage.jsx';
@@ -12,7 +12,7 @@ import './ConfiguracoesPage.css';
 import './UsuariosPage.css';
 
 const ALL_MENU_ITEMS = [
-  { id: 'formulas',   label: 'Fórmulas e Cálculos',   icon: Calculator,  modulo: 'configuracoes', acao: 'editar_integracoes' },
+  { id: 'formulas',   label: 'Parâmetros Gerais',   icon: SlidersHorizontal,  modulo: 'configuracoes', acao: 'editar_integracoes' },
   { id: 'calendario', label: 'Calendário de Feriados', icon: CalendarDays, modulo: 'calendario',    acao: 'acessar' },
   { id: 'usuarios',   label: 'Usuários & Permissões',  icon: Users,        modulo: 'usuarios',      acao: 'acessar' },
 ];
@@ -197,13 +197,125 @@ function ConfirmDelete({ user, onClose, onConfirmed }) {
   );
 }
 
-// ── Painel: Fórmulas e Cálculos ───────────────────────────────────────────────
+// ── Modal: Criar / Editar Analista ────────────────────────────────────────────
+function AnalistaModal({ analista, onClose, onSaved }) {
+  const isEdit = !!analista?.id;
+  const [nome,   setNome]   = useState(analista?.nome   || '');
+  const [equipe, setEquipe] = useState(analista?.equipe || '');
+  const [ativo,  setAtivo]  = useState(analista?.ativo !== false);
+  const [error,  setError]  = useState('');
+
+  function handleSave(e) {
+    e.preventDefault();
+    if (!nome.trim()) { setError('Nome é obrigatório'); return; }
+    onSaved({ id: analista?.id ?? Date.now(), nome: nome.trim(), equipe: equipe.trim(), ativo });
+  }
+
+  return (
+    <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="umodal-card">
+        <div className="umodal-header">
+          <h2 className="umodal-title">{isEdit ? 'Editar Analista' : 'Novo Analista'}</h2>
+          <button className="umodal-close" onClick={onClose}><X size={16} /></button>
+        </div>
+        <form className="umodal-form" onSubmit={handleSave} noValidate>
+          <div className="umodal-field">
+            <label className="umodal-label">Nome *</label>
+            <input className="umodal-input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do analista" />
+          </div>
+          <div className="umodal-field">
+            <label className="umodal-label">Equipe</label>
+            <input className="umodal-input" value={equipe} onChange={e => setEquipe(e.target.value)} placeholder="Nome da equipe" />
+          </div>
+          {isEdit && (
+            <div className="umodal-field umodal-field--row">
+              <label className="umodal-label">Analista ativo</label>
+              <button
+                type="button"
+                className={`umodal-toggle${ativo ? ' is-on' : ''}`}
+                onClick={() => setAtivo(v => !v)}
+                aria-label="Alternar status"
+              >
+                <span className="umodal-toggle-knob" />
+              </button>
+            </div>
+          )}
+          {error && <p className="umodal-error">{error}</p>}
+          <div className="umodal-actions">
+            <button type="button" className="umodal-btn umodal-btn--cancel" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="umodal-btn umodal-btn--save">
+              <Check size={14} />
+              {isEdit ? 'Salvar Alterações' : 'Criar Analista'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: Confirmar Remoção de Analista ──────────────────────────────────────
+function ConfirmDeleteAnalista({ analista, onClose, onConfirmed }) {
+  return (
+    <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="umodal-card umodal-card--sm">
+        <div className="umodal-header">
+          <h2 className="umodal-title">Remover Analista</h2>
+          <button className="umodal-close" onClick={onClose}><X size={16} /></button>
+        </div>
+        <p className="umodal-confirm-text">
+          Tem certeza que deseja remover <strong>{analista.nome}</strong>?<br />
+          Esta ação não pode ser desfeita.
+        </p>
+        <div className="umodal-actions">
+          <button className="umodal-btn umodal-btn--cancel" onClick={onClose}>Cancelar</button>
+          <button className="umodal-btn umodal-btn--danger" onClick={onConfirmed}>
+            <Trash2 size={14} />Remover
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Painel: Parâmetros Gerais ───────────────────────────────────────────────
 const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
   const storageKey = 'config_horas_por_dia';
   const [horasPorDia, setHorasPorDia] = useState(
     () => localStorage.getItem(storageKey) ?? '8'
   );
+  const [tabelaAberta, setTabelaAberta] = useState(false);
 
+  // ── Analistas ──────────────────────────────────────────────────────────────
+  const analistasKey = 'config_analistas';
+  const [analistas, setAnalistas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(analistasKey) || '[]'); }
+    catch { return []; }
+  });
+  const [filterNomeA,   setFilterNomeA]   = useState('');
+  const [analistaModal, setAnalistaModal] = useState(null);
+
+  const filteredAnalistas = analistas.filter(a =>
+    !filterNomeA.trim() || a.nome.toLowerCase().includes(filterNomeA.trim().toLowerCase())
+  );
+
+  function persistAnalistas(list) {
+    localStorage.setItem(analistasKey, JSON.stringify(list));
+    setAnalistas(list);
+  }
+
+  function handleAnalistaSaved(data) {
+    const exists = analistas.some(a => a.id === data.id);
+    persistAnalistas(exists ? analistas.map(a => a.id === data.id ? data : a) : [...analistas, data]);
+    setAnalistaModal(null);
+  }
+
+  function handleAnalistaDeleted(id) {
+    persistAnalistas(analistas.filter(a => a.id !== id));
+    setAnalistaModal(null);
+  }
+
+  // ── Horas por dia ──────────────────────────────────────────────────────────
   function handleChange(e) {
     const val = e.target.value;
     if (/^\d*\.?\d*$/.test(val)) setHorasPorDia(val);
@@ -221,15 +333,17 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
   const hpdValido = !isNaN(hpd) && hpd > 0;
 
   return (
-    <div className="cfg-panel">
+    <div className="cfg-panel cfg-panel--formula">
       <div className="cfg-panel-header">
-        <h2 className="cfg-panel-title">Fórmulas e Cálculos</h2>
+        <h2 className="cfg-panel-title">Parâmetros Gerais</h2>
         <p className="cfg-panel-desc">
-          Parâmetros utilizados nas fórmulas e cálculos do sistema.
+          Parâmetros utilizados nas listas e cálculos gerais do sistema.
         </p>
       </div>
 
       <div className="cfg-panel-body">
+
+        {/* ── Horas por dia ─────────────────────────────────────── */}
         <div className="cfg-field-group">
           <label className="cfg-field-label" htmlFor="horas-por-dia">
             Horas por dia
@@ -251,38 +365,131 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
 
           {hpdValido && (
             <div className="cfg-dias-table-wrap">
-              <p className="cfg-dias-table-label">
-                Tabela de referência — horas acumuladas por dia trabalhado
-              </p>
-              <div className="cfg-dias-table-scroll">
-                <table className="cfg-dias-table">
-                  <thead>
-                    <tr>
-                      <th>Dias</th>
-                      <th>Cálculo</th>
-                      <th>Total de Horas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
-                      const total = parseFloat((d * hpd).toFixed(2));
-                      return (
-                        <tr key={d}>
-                          <td className="cfg-dias-td-day">{d} {d === 1 ? 'dia' : 'dias'}</td>
-                          <td className="cfg-dias-td-calc">
-                            {d} × {horasPorDia}
-                          </td>
-                          <td className="cfg-dias-td-total">{total} h</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <button
+                type="button"
+                className="cfg-accordion-toggle"
+                onClick={() => setTabelaAberta(o => !o)}
+                aria-expanded={tabelaAberta}
+              >
+                <span className="cfg-dias-table-label">
+                  Tabela de referência — horas acumuladas por dia trabalhado
+                </span>
+                <ChevronDown
+                  size={15}
+                  className={`cfg-accordion-chevron${tabelaAberta ? ' is-open' : ''}`}
+                />
+              </button>
+              {tabelaAberta && (
+                <div className="cfg-dias-table-scroll">
+                  <table className="cfg-dias-table">
+                    <thead>
+                      <tr>
+                        <th>Dias</th>
+                        <th>Cálculo</th>
+                        <th>Total de Horas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
+                        const total = parseFloat((d * hpd).toFixed(2));
+                        return (
+                          <tr key={d}>
+                            <td className="cfg-dias-td-day">{d} {d === 1 ? 'dia' : 'dias'}</td>
+                            <td className="cfg-dias-td-calc">{d} × {horasPorDia}</td>
+                            <td className="cfg-dias-td-total">{total} h</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
+
+        {/* ── Registro de Analistas ──────────────────────────────── */}
+        <div className="cfg-field-group cfg-field-group--table">
+          <div className="cfg-field-group-top">
+            <div>
+              <p className="cfg-field-label">Registro de Analistas</p>
+              <p className="cfg-field-hint">Cadastre e gerencie os analistas disponíveis para alocação.</p>
+            </div>
+          </div>
+
+          <div className="cfg-usuarios-filters">
+            <div className="cfg-filter-group">
+              <div className="cfg-filter-input-wrap">
+                <Search size={13} className="cfg-filter-icon" />
+                <input
+                  className="cfg-input cfg-input--filter cfg-input--search"
+                  placeholder="Filtrar por nome..."
+                  value={filterNomeA}
+                  onChange={e => setFilterNomeA(e.target.value)}
+                />
+              </div>
+            </div>
+            <button className="cfg-criar-btn" onClick={() => setAnalistaModal({ type: 'add' })}>
+              <Plus size={14} />
+              Novo Analista
+            </button>
+          </div>
+
+          <div className="cfg-usuarios-table-wrap">
+            <table className="cfg-usuarios-table">
+              <thead>
+                <tr>
+                  <th>Analista</th>
+                  <th>Equipe</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAnalistas.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="cfg-usuarios-empty">Nenhum analista cadastrado.</td>
+                  </tr>
+                ) : filteredAnalistas.map(a => (
+                  <tr key={a.id}>
+                    <td>{a.nome}</td>
+                    <td className="cfg-usuarios-td-email">{a.equipe || '—'}</td>
+                    <td>
+                      <span className={`cfg-status-badge${a.ativo ? ' cfg-status-badge--on' : ' cfg-status-badge--off'}`}>
+                        <span className="cfg-status-dot" />
+                        {a.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cfg-usuarios-td-actions">
+                        <GearMenu
+                          onEditar={() => setAnalistaModal({ type: 'edit', analista: a })}
+                          onRemover={() => setAnalistaModal({ type: 'delete', analista: a })}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
+
+      {analistaModal?.type === 'add' && (
+        <AnalistaModal analista={null} onClose={() => setAnalistaModal(null)} onSaved={handleAnalistaSaved} />
+      )}
+      {analistaModal?.type === 'edit' && (
+        <AnalistaModal analista={analistaModal.analista} onClose={() => setAnalistaModal(null)} onSaved={handleAnalistaSaved} />
+      )}
+      {analistaModal?.type === 'delete' && (
+        <ConfirmDeleteAnalista
+          analista={analistaModal.analista}
+          onClose={() => setAnalistaModal(null)}
+          onConfirmed={() => handleAnalistaDeleted(analistaModal.analista.id)}
+        />
+      )}
     </div>
   );
 });

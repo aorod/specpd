@@ -778,18 +778,55 @@
 
 .cfg-success-btn:hover { opacity: 0.88; }
 
+/* ─── Painel Parâmetros Gerais ───────────────────────────────── */
+.cfg-panel--formula {
+  max-width: 900px;
+}
+
+/* ─── Accordion toggle ───────────────────────────────────────── */
+.cfg-accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  gap: 8px;
+  text-align: left;
+}
+
+.cfg-accordion-toggle:hover .cfg-dias-table-label {
+  color: var(--color-text-secondary);
+}
+
+.cfg-accordion-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 200ms ease;
+}
+
+.cfg-accordion-chevron.is-open {
+  transform: rotate(180deg);
+}
+
 /* ─── Tabela de dias × horas ─────────────────────────────────── */
 .cfg-dias-table-wrap {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .cfg-dias-table-label {
   font-size: 0.78rem;
   color: var(--color-text-muted);
   font-weight: 500;
+}
+
+.cfg-accordion-toggle + .cfg-dias-table-scroll {
+  margin-top: 4px;
 }
 
 .cfg-dias-table-scroll {

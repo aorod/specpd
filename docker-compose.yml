@@ -16,6 +16,8 @@ services:
       - ./dashboard/server/.env
     environment:
       NODE_ENV: development
+    networks:
+      - app-network
 
   frontend:
     image: node:20-alpine
@@ -31,7 +33,13 @@ services:
       BACKEND_URL: http://backend:3001      # proxy do Vite aponta pro service do compose
     depends_on:
       - backend
+    networks:
+      - app-network
 
 volumes:
   backend_modules:
   frontend_modules:
+
+networks:
+  app-network:
+    driver: bridge

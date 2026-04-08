@@ -29,7 +29,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   }, [filteredData, search]);
 
   const metrics = useTimesheetMetrics(displayData);
-  const { diasUteis, totalHorasMes } = useWorkdaysCalc(filters);
+  const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje } = useWorkdaysCalc(filters);
 
   const porResponsavelHoras = useMemo(() => {
     const map = new Map();
@@ -60,6 +60,10 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
 
   const analLabel = numAnalistas === 1 ? '1 analista' : `${numAnalistas} analistas`;
 
+  const totalHorasFechamento = parseFloat((diasUteisAteHoje * horasPorDia).toFixed(1));
+  const hoje = new Date();
+  const hojeFormatado = hoje.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
   const cardDefs = [
     {
       id:     'horasMes',
@@ -89,8 +93,8 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
       id:     'fechamento',
       icon:   CalendarCheck,
       label:  'Fechamento Dia e Data',
-      value:  '--',
-      detail: null,
+      value:  diasUteisAteHoje > 0 ? formatHoras(totalHorasFechamento) : '--',
+      detail: `${hojeFormatado}${diasUteisAteHoje > 0 ? ` · ${diasUteisAteHoje} dias úteis` : ''}`,
       accent: 'info',
     },
   ];
