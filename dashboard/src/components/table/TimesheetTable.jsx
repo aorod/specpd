@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import { formatMesLabel, formatHoras } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
 import { useSort } from '../../hooks/useSort.js';
@@ -74,7 +74,18 @@ export default function TimesheetTable({ data }) {
     <div className="uc-table-wrap">
       <div className="uc-table-header">
         <h3 className="uc-table-title">Lista de Timesheets</h3>
-        <span className="uc-table-count">{sortedData.length} item{sortedData.length !== 1 ? 's' : ''}</span>
+        <div className="uc-table-header-right">
+          <a
+            href="https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/create/Timesheet"
+            target="_blank"
+            rel="noreferrer"
+            className="criar-timesheet-btn"
+          >
+            <Plus size={13} />
+            Criar Timesheet
+          </a>
+          <span className="uc-table-count">{sortedData.length} item{sortedData.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
       <div className="uc-table-scroll">

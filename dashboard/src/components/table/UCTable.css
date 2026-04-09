@@ -21,6 +21,30 @@
   color: var(--color-text-secondary);
 }
 
+.uc-table-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.criar-timesheet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.criar-timesheet-btn:hover {
+  opacity: 0.85;
+}
+
 .uc-table-count {
   font-size: 0.75rem;
   color: var(--color-text-muted);
@@ -170,6 +194,7 @@
 .state-badge--finalizado         { background: var(--color-normal-bg);    color: var(--color-normal); }
 .state-badge--pronto-para-deploy { background: rgba(20, 184, 166, 0.12);  color: #2dd4bf; }
 .state-badge--não-iniciado       { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+.state-badge--em-andamento       { background: rgba(56, 189, 248, 0.12);  color: #38bdf8; }
 .state-badge--stand-by           { background: rgba(251, 191, 36, 0.12);  color: #fbbf24; }
 .state-badge--stand-by-interno   { background: rgba(251, 191, 36, 0.10);  color: #f59e0b; }
 .state-badge--stand-by-externo   { background: rgba(245, 158, 11, 0.10);  color: #d97706; }

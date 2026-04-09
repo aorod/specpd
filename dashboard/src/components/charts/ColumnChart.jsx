@@ -5,6 +5,33 @@ import { formatHoras } from '../../utils/formatters.js';
 import ChartCard from './ChartCard.jsx';
 import './Charts.css';
 
+// ── Tooltip helpers ────────────────────────────────────────────────────────────
+function fmtISODate(iso) {
+  if (!iso) return '';
+  const [, m, d] = iso.split('-');
+  return `${d}/${m}`;
+}
+
+function fmtRange(dataInicio, dataFim) {
+  if (!dataInicio) return '-';
+  const start = fmtISODate(dataInicio);
+  if (!dataFim || dataInicio === dataFim) return start;
+  return `${start} – ${fmtISODate(dataFim)}`;
+}
+
+function aggregateRecords(records) {
+  if (!records || records.length === 0) return null;
+  const dias  = records.reduce((s, r) => s + r.dias,  0);
+  const horas = records.reduce((s, r) => s + r.horas, 0);
+  const sorted = [...records].sort((a, b) => (a.dataInicio < b.dataInicio ? -1 : 1));
+  return {
+    dias,
+    horas: parseFloat(horas.toFixed(2)),
+    dataInicio: sorted[0].dataInicio,
+    dataFim:    sorted[sorted.length - 1].dataFim,
+  };
+}
+
 const COL_W    = 36;
 const COL_GAP  = 16;
 const BAR_H    = 160;
@@ -19,8 +46,10 @@ const SVG_H    = PAD_TOP + BAR_H + COUNT_H + LABEL_H;
  * Each line is rendered as a dashed polyline connecting per-column dots, with optional value labels.
  * perColumnLines[0] = Meta do Mês (blue), perColumnLines[1] = Meta do Dia (green)
  */
-export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [] }) {
-  const [tooltip, setTooltip]         = useState(null);
+const COLOR_AUSENTE = '#f59e0b'; // amber — analista em férias/atestado/dayoff hoje
+
+export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [], tooltipData, ausentesHoje, onSelectKey }) {
+  const [tooltip, setTooltip]         = useState(null); // { key, total, x, y }
   const [asc, setAsc]                 = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
 
@@ -45,7 +74,11 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
   });
 
   const handleBarClick = (key) => {
-    setSelectedKey((prev) => (prev === key ? null : key));
+    setSelectedKey((prev) => {
+      const next = prev === key ? null : key;
+      onSelectKey?.(next);
+      return next;
+    });
   };
 
   // Compute mini-card values for selected analista
@@ -75,6 +108,8 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
       accent: selEffort !== null && selMetaDia !== null
         ? (selEffort < selMetaDia ? 'var(--color-error, #ef4444)' : 'var(--color-success, #22c55e)')
         : 'var(--color-text-primary)',
+      metaLabel: selEffort !== null && selMetaDia !== null && selEffort < selMetaDia ? 'para chegar a Meta do Dia de' : null,
+      metaValue: selEffort !== null && selMetaDia !== null && selEffort < selMetaDia ? formatHoras(selMetaDia) : null,
     },
     {
       label: 'Total Mês Individual',
@@ -82,6 +117,14 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
       accent: 'var(--color-accent)',
     },
   ];
+
+  // Pre-compute Y de cada linha de referência por barra, para detectar sobreposição
+  const refLinePositions = perColumnLines.map((line) =>
+    entries.map(([key]) => {
+      const value = line.values?.get(key) ?? 0;
+      return PAD_TOP + BAR_H - (value / maxTotal) * BAR_H;
+    })
+  );
 
   const sortButton = (
     <button
@@ -175,6 +218,8 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
 
             const isSelected  = selectedKey === key;
             const hasSelection = selectedKey !== null;
+            const isAusente   = ausentesHoje?.has(key) ?? false;
+            const barColor    = isAusente ? COLOR_AUSENTE : 'var(--color-accent)';
 
             const name  = aliasName(key);
             const words = name.split(' ');
@@ -206,27 +251,51 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
                     width={COL_W}
                     height={barH}
                     rx={3}
-                    fill={isSelected ? 'var(--color-accent)' : 'var(--color-accent)'}
+                    fill={barColor}
                     opacity={opacity}
                     className="v-bar"
                     style={{ animationDelay: `${i * 40}ms` }}
-                    onMouseEnter={() => !hasSelection && setTooltip({ key, total })}
+                    onMouseEnter={(e) => !hasSelection && setTooltip({ key, total, x: e.clientX, y: e.clientY })}
+                    onMouseMove={(e)  => !hasSelection && setTooltip((prev) => prev?.key === key ? { ...prev, x: e.clientX, y: e.clientY } : prev)}
                     onMouseLeave={() => setTooltip(null)}
                   />
                 )}
 
                 {/* Valor realizado acima da barra */}
-                <text
-                  x={cx}
-                  y={barY - 3}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fontWeight="600"
-                  fill="var(--color-accent)"
-                  opacity={hasSelection && !isSelected ? 0.25 : 1}
-                >
-                  {formatHoras(total)}
-                </text>
+                {(() => {
+                  const labelY    = barY - 3;
+                  const labelText = formatHoras(total);
+                  const isNear    = perColumnLines.some((_, li) => {
+                    const refY = refLinePositions[li]?.[i];
+                    return refY != null && Math.abs(labelY - (refY - 5)) < 14;
+                  });
+                  const estW = labelText.length * 5.2 + 4;
+                  return (
+                    <g opacity={hasSelection && !isSelected ? 0.25 : 1}>
+                      {isNear && (
+                        <rect
+                          x={cx - estW / 2}
+                          y={labelY - 9}
+                          width={estW}
+                          height={12}
+                          rx={2}
+                          fill="var(--color-surface)"
+                          opacity={0.85}
+                        />
+                      )}
+                      <text
+                        x={cx}
+                        y={labelY}
+                        textAnchor="middle"
+                        fontSize={9}
+                        fontWeight={isNear ? '700' : '600'}
+                        fill={barColor}
+                      >
+                        {labelText}
+                      </text>
+                    </g>
+                  );
+                })()}
 
                 {/* Label abaixo da barra */}
                 {labelLines.map((line, li) => (
@@ -236,8 +305,8 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
                     y={PAD_TOP + BAR_H + COUNT_H + li * 13}
                     textAnchor="middle"
                     fontSize={8.5}
-                    fontWeight={isSelected ? '700' : '400'}
-                    fill={isSelected ? 'var(--color-accent)' : 'var(--color-text-secondary)'}
+                    fontWeight={isSelected || isAusente ? '700' : '400'}
+                    fill={isSelected || isAusente ? barColor : 'var(--color-text-secondary)'}
                     opacity={hasSelection && !isSelected ? 0.4 : 1}
                   >
                     {line}
@@ -248,12 +317,51 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
           })}
         </svg>
 
-        {tooltip && !selectedKey && (
-          <div className="chart-tooltip">
-            <span className="chart-tooltip-label">{aliasName(tooltip.key)}</span>
-            <span>{tooltipLabel}: <strong>{formatHoras(tooltip.total)}</strong></span>
-          </div>
-        )}
+        {tooltip && !selectedKey && (() => {
+          const extra = tooltipData?.get(tooltip.key);
+          if (!extra) return null;
+
+          const agFerias    = aggregateRecords(extra.ferias);
+          const agAtestados = aggregateRecords(extra.atestados);
+          const agDayoffs   = aggregateRecords(extra.dayoffs);
+
+          const rows = [
+            agFerias    && { label: 'Férias',   data: agFerias },
+            agAtestados && { label: 'Atestado', data: agAtestados },
+            agDayoffs   && { label: 'Day Off',  data: agDayoffs },
+          ].filter(Boolean);
+
+          if (rows.length === 0) return null;
+
+          const tx = Math.min(Math.max(8, tooltip.x - 155), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 320);
+
+          return (
+            <div
+              className="analista-tooltip"
+              style={{ left: tx, top: tooltip.y, transform: 'translateY(calc(-100% - 10px))' }}
+            >
+              <span className="analista-tooltip-name">{aliasName(tooltip.key)}</span>
+              <div className="analista-tooltip-grid">
+                {rows.map(({ label, data }) => (
+                  <div key={label} className="analista-tooltip-row">
+                    <div className="analista-tooltip-card">
+                      <span className="analista-tooltip-val">{formatHoras(data.horas)}</span>
+                      <span className="analista-tooltip-lbl">{label} (h)</span>
+                    </div>
+                    <div className="analista-tooltip-card">
+                      <span className="analista-tooltip-val">{data.dias}</span>
+                      <span className="analista-tooltip-lbl">{label} (d)</span>
+                    </div>
+                    <div className="analista-tooltip-card">
+                      <span className="analista-tooltip-val analista-tooltip-val--date">{fmtRange(data.dataInicio, data.dataFim)}</span>
+                      <span className="analista-tooltip-lbl">{label} (dt)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Mini cards — shown when an analista bar is clicked */}
@@ -281,9 +389,19 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
             <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
               {card.label}
             </span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: card.value === '--' ? 'var(--color-text-muted)' : card.accent }}>
-              {card.value}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '0 6px' }}>
+              <span style={{ fontSize: '1.1rem', fontWeight: 700, color: card.value === '--' ? 'var(--color-text-muted)' : card.accent }}>
+                {card.value}
+              </span>
+              {card.metaLabel && (
+                <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                  ({card.metaLabel}{' '}
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-secondary)' }}>
+                    {card.metaValue}
+                  </span>)
+                </span>
+              )}
+            </div>
             {selectedKey && (
               <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>
                 {aliasName(selectedKey)}

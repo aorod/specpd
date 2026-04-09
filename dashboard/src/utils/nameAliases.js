@@ -21,14 +21,35 @@ const NAME_ALIASES = {
   'Leonardo Jorge Silva Rodriguez':         'Leonardo Silva',
 };
 
+function _normalize(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function _allWordsMatch(registroNome, azureDevOpsName) {
+  const words  = _normalize(registroNome).split(/\s+/).filter(Boolean);
+  const target = _normalize(azureDevOpsName);
+  return words.every(w => target.includes(w));
+}
+
 /**
- * Retorna o alias do nome, ou o nome original se não houver mapeamento.
- * @param {string} name
+ * Retorna o nome do analista no Registro de Analistas (se existir match por
+ * palavras), ou o alias estático, ou o nome original.
+ * @param {string} name  Nome vindo do Azure DevOps
  * @returns {string}
  */
 export function aliasName(name) {
   if (!name) return name;
-  return NAME_ALIASES[name.trim()] ?? name;
+  const trimmed = name.trim();
+  // 1. De/para dinâmico: busca nos analistas ativos do Registro de Analistas
+  try {
+    const analistas = JSON.parse(localStorage.getItem('config_analistas') || '[]');
+    const match = analistas
+      .filter(a => a.ativo !== false)
+      .find(a => _allWordsMatch(a.nome, trimmed));
+    if (match) return match.nome;
+  } catch { /* localStorage indisponível */ }
+  // 2. Mapa estático legado
+  return NAME_ALIASES[trimmed] ?? trimmed;
 }
 
 /**

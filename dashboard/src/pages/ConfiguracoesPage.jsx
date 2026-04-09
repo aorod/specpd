@@ -557,6 +557,17 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
   );
   const [tabelaAberta, setTabelaAberta] = useState(false);
 
+  // ── Regras de Férias ───────────────────────────────────────────────────────
+  const regrasKey = 'config_regras_ferias';
+  const [regrasFerias, setRegrasFerias] = useState(
+    () => localStorage.getItem(regrasKey) !== 'false'
+  );
+
+  function handleRegrasFerias(ativo) {
+    setRegrasFerias(ativo);
+    localStorage.setItem(regrasKey, String(ativo));
+  }
+
   // ── Analistas ──────────────────────────────────────────────────────────────
   const analistasKey = 'config_analistas';
   const [analistas, setAnalistas] = useState(() => {
@@ -801,6 +812,25 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
               </div>
             </div>
 
+          </div>
+        </div>
+
+        {/* ── Regras de Férias ──────────────────────────────────── */}
+        <div className="cfg-field-group">
+          <p className="cfg-field-label">Regras de Férias</p>
+          <p className="cfg-field-hint">
+            Quando ativado, a solicitação de férias valida todos os requisitos obrigatórios da política da empresa.
+            Quando desativado, os requisitos são ignorados e qualquer período pode ser solicitado.
+          </p>
+          <div className="cfg-radio-group">
+            <label className="cfg-radio-label" onClick={() => handleRegrasFerias(true)}>
+              <span className={`cfg-radio-circle${regrasFerias ? ' cfg-radio-circle--on' : ''}`} />
+              Ativar
+            </label>
+            <label className="cfg-radio-label" onClick={() => handleRegrasFerias(false)}>
+              <span className={`cfg-radio-circle${!regrasFerias ? ' cfg-radio-circle--on' : ''}`} />
+              Desativar
+            </label>
           </div>
         </div>
 

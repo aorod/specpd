@@ -20,11 +20,12 @@ import './UseCasePage.css';
 
 export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useTimesheetData();
-  const { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, isActive, activeCount } = useTimesheetFilters(rawData);
+  const { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, clearFilter, isActive, activeCount } = useTimesheetFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
   const [chartsCollapsed, setChartsCollapsed] = useState(false);
+  const [selectedAnalista, setSelectedAnalista] = useState(null);
 
   const displayData = useMemo(() => {
     if (!search.trim()) return filteredData;
@@ -35,7 +36,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   const metrics = useTimesheetMetrics(displayData);
   const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje, nationalByAno, pontoFacDates, anosEfetivos, mesesEfetivos } = useWorkdaysCalc(filters);
   const { registros: dayoffs } = useDayOffs();
-  const { registros: ferias } = useFerias();
+  const { registros: ferias }  = useFerias();
 
   const porResponsavelHoras = useMemo(() => {
     const map = new Map();
@@ -107,31 +108,219 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
     return { metaMesMap, metaDiaMap };
   }, [porResponsavelHoras, dayoffs, ferias, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, diasUteis, diasUteisAteHoje, horasPorDia]);
 
+  // ── Analistas ausentes hoje (férias / atestado / day off) — apenas no mês vigente ──
+  const analistasAusentesNoPeriodo = useMemo(() => {
+    const hoje = new Date();
+    const anoAtual = String(hoje.getFullYear());
+    const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+
+    // Só aplica a coloração se o filtro incluir o mês/ano atual
+    const filtrandoMesAtual =
+      filters.anos.includes(anoAtual) && filters.meses.includes(mesAtual);
+
+    if (!filtrandoMesAtual) return new Set();
+
+    const hojeISO = `${anoAtual}-${mesAtual}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const ausentes = new Set();
+
+    for (const [key] of porResponsavelHoras) {
+      const alias = aliasName(key);
+
+      const temFerias = ferias.some((f) =>
+        f.analista === alias &&
+        !f.status?.startsWith('Recusado') &&
+        f.dataInicio <= hojeISO && f.dataFim >= hojeISO
+      );
+      const temDayoff = dayoffs.some((d) =>
+        d.analista === alias &&
+        d.dataInicio <= hojeISO && d.dataFim >= hojeISO
+      );
+
+      if (temFerias || temDayoff) ausentes.add(key);
+    }
+
+    return ausentes;
+  }, [porResponsavelHoras, ferias, dayoffs, filters.anos, filters.meses]);
+
+  // ── Dados de Férias/Atestado/DayOff para tooltip do gráfico de Analistas ───────
+  const tooltipAnalistaData = useMemo(() => {
+    const map = new Map();
+
+    const calcDiasPeriodo = (dataInicio, dataFim) => {
+      let total = 0;
+      for (const ano of anosEfetivos) {
+        const anoNum   = parseInt(ano, 10);
+        const national = nationalByAno[ano] ?? [];
+        for (const mes of mesesEfetivos) {
+          total += calcDiasUteisNoIntervalo(dataInicio, dataFim, anoNum, parseInt(mes, 10), national, pontoFacDates);
+        }
+      }
+      return total;
+    };
+
+    const processRecords = (records) =>
+      records
+        .map((r) => {
+          const dias = calcDiasPeriodo(r.dataInicio, r.dataFim);
+          return { dataInicio: r.dataInicio, dataFim: r.dataFim, dias, horas: parseFloat((dias * horasPorDia).toFixed(2)) };
+        })
+        .filter((r) => r.dias > 0);
+
+    for (const [key] of porResponsavelHoras) {
+      const alias = aliasName(key);
+
+      const feriasList    = processRecords(ferias.filter((f) => f.analista === alias && !f.status?.startsWith('Recusado')));
+      const atestadosList = processRecords(dayoffs.filter((d) => d.analista === alias && d.tipoAbono === 'Atestado'));
+      const dayoffsList   = processRecords(dayoffs.filter((d) => d.analista === alias && d.tipoAbono === 'Day Off'));
+
+      if (feriasList.length > 0 || atestadosList.length > 0 || dayoffsList.length > 0) {
+        map.set(key, { ferias: feriasList, atestados: atestadosList, dayoffs: dayoffsList });
+      }
+    }
+
+    return map;
+  }, [porResponsavelHoras, ferias, dayoffs, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, horasPorDia]);
+
   const togglePin = (id) =>
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
-  const numAnalistas        = metrics.porResponsavel.size;
+  const handleSelectAnalista = (key) => {
+    setSelectedAnalista(key);
+    if (key) {
+      setSingleFilter('responsaveis', key);
+    } else {
+      clearFilter('responsaveis');
+    }
+  };
+
+  // ── Analistas ativos do Registro de Analistas (Configurações) ───────────────
+  const analistasAtivos = useMemo(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem('config_analistas') || '[]');
+      const ativos = list.filter((a) => a.ativo !== false);
+      if (filters.equipes.length > 0) {
+        return ativos.filter((a) => filters.equipes.includes(a.equipe));
+      }
+      return ativos;
+    } catch {
+      return [];
+    }
+  }, [filters.equipes]);
+
+  const numAnalistas        = analistasAtivos.length || metrics.porResponsavel.size;
   const totalHorasMesEquipe = parseFloat((totalHorasMes * Math.max(numAnalistas, 1)).toFixed(2));
   const totalHorasRealizadas = parseFloat(metrics.totalEffort.toFixed(2));
-  const totalHorasFaltantes  = parseFloat((totalHorasMesEquipe - totalHorasRealizadas).toFixed(2));
+
+  // Horas realizadas considerando apenas ANO, MÊS e EQUIPE (ignora PRODUTO, STATUS, ATIVIDADE, ANALISTA)
+  const totalHorasRealizadasBase = useMemo(() => {
+    const base = rawData.filter((item) => {
+      if (filters.anos.length > 0   && !filters.anos.includes(item.ano))    return false;
+      if (filters.meses.length > 0  && !filters.meses.includes(item.mes))   return false;
+      if (filters.equipes.length > 0) {
+        const val = item.equipe || 'Sem Equipe';
+        if (!filters.equipes.includes(val)) return false;
+      }
+      return true;
+    });
+    return parseFloat(base.reduce((sum, item) => sum + (typeof item.effort === 'number' ? item.effort : 0), 0).toFixed(2));
+  }, [rawData, filters.anos, filters.meses, filters.equipes]);
+
+  const totalHorasFaltantes  = parseFloat((totalHorasMesEquipe - totalHorasRealizadasBase).toFixed(2));
   const pctConcluido = totalHorasMesEquipe > 0
-    ? parseFloat(((totalHorasRealizadas / totalHorasMesEquipe) * 100).toFixed(2))
+    ? parseFloat(((totalHorasRealizadasBase / totalHorasMesEquipe) * 100).toFixed(2))
     : 0;
 
-  const analLabel = numAnalistas === 1 ? '1 analista' : `${numAnalistas} analistas`;
+  const analLabel = filters.equipes.length === 1
+    ? `${filters.equipes[0]} · ${numAnalistas} analista${numAnalistas !== 1 ? 's' : ''}`
+    : filters.equipes.length > 1
+    ? filters.equipes.join(' · ') + ` · ${numAnalistas} analista${numAnalistas !== 1 ? 's' : ''}`
+    : numAnalistas === 1 ? '1 analista' : `${numAnalistas} analistas`;
 
   const totalHorasFechamento = parseFloat((diasUteisAteHoje * horasPorDia).toFixed(2));
   const hoje = new Date();
   const hojeFormatado = hoje.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // ── Dados para tooltip do card Total Horas/Mês ──────────────────────────────
+  const tooltipHorasMes = useMemo(() => {
+    const calcDias = (dataInicio, dataFim) => {
+      let total = 0;
+      for (const ano of anosEfetivos) {
+        const anoNum   = parseInt(ano, 10);
+        const national = nationalByAno[ano] ?? [];
+        for (const mes of mesesEfetivos) {
+          total += calcDiasUteisNoIntervalo(dataInicio, dataFim, anoNum, parseInt(mes, 10), national, pontoFacDates);
+        }
+      }
+      return total;
+    };
+
+    let feriasD = 0, atestadoD = 0, dayoffD = 0;
+
+    for (const a of analistasAtivos) {
+      const alias = a.nome;
+      for (const f of ferias) {
+        if (f.analista !== alias) continue;
+        if (f.status?.startsWith('Recusado')) continue;
+        feriasD += calcDias(f.dataInicio, f.dataFim);
+      }
+      for (const d of dayoffs) {
+        if (d.analista !== alias) continue;
+        if (d.tipoAbono === 'Atestado') atestadoD += calcDias(d.dataInicio, d.dataFim);
+        else if (d.tipoAbono === 'Day Off') dayoffD += calcDias(d.dataInicio, d.dataFim);
+      }
+    }
+
+    const feriasH    = parseFloat((feriasD    * horasPorDia).toFixed(2));
+    const atestadoH  = parseFloat((atestadoD  * horasPorDia).toFixed(2));
+    const dayoffH    = parseFloat((dayoffD    * horasPorDia).toFixed(2));
+
+    // Pares lado a lado (2 colunas no tooltip)
+    const rows = [
+      [
+        { label: 'Nº Analistas',       value: numAnalistas },
+        { label: 'Horas Base',         value: `${horasPorDia}h` },
+      ],
+      [
+        { label: 'Total Original (h)', value: formatHoras(parseFloat((diasUteis * numAnalistas * horasPorDia).toFixed(2))) },
+        { label: 'Total Original (d)', value: diasUteis },
+      ],
+    ];
+
+    if (feriasD > 0 || feriasH > 0) {
+      rows.push([
+        { label: 'Férias (h)', value: formatHoras(feriasH) },
+        { label: 'Férias (d)', value: feriasD },
+      ]);
+    }
+    if (atestadoD > 0 || atestadoH > 0) {
+      rows.push([
+        { label: 'Atestados (h)', value: formatHoras(atestadoH) },
+        { label: 'Atestados (d)', value: atestadoD },
+      ]);
+    }
+    if (dayoffD > 0 || dayoffH > 0) {
+      rows.push([
+        { label: 'Day Off (h)', value: formatHoras(dayoffH) },
+        { label: 'Day Off (d)', value: dayoffD },
+      ]);
+    }
+
+    return rows;
+  }, [analistasAtivos, ferias, dayoffs, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, diasUteis, horasPorDia, numAnalistas]);
+
+  const metaDiaCard = selectedAnalista
+    ? metaAnalistaLines.metaDiaMap.get(selectedAnalista) ?? 0
+    : totalHorasFechamento;
+
   const cardDefs = [
     {
-      id:     'horasMes',
-      icon:   CalendarClock,
-      label:  'Total Horas/Mês',
-      value:  formatHoras(totalHorasMesEquipe),
-      detail: diasUteis > 0 ? `${diasUteis} dias úteis · ${analLabel}` : 'calculando…',
-      accent: 'neutral',
+      id:      'horasMes',
+      icon:    CalendarClock,
+      label:   'Total Horas/Mês',
+      value:   formatHoras(totalHorasMesEquipe),
+      detail:  diasUteis > 0 ? `${diasUteis} dias úteis · ${analLabel}` : 'calculando…',
+      accent:  'neutral',
+      tooltip: tooltipHorasMes,
     },
     {
       id:     'horasRealizadas',
@@ -146,14 +335,14 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
       icon:   TrendingDown,
       label:  'Total Horas Faltantes',
       value:  formatHoras(-totalHorasFaltantes),
-      detail: totalHorasMesEquipe > 0 ? `${pctConcluido}% concluído` : null,
+      detail: totalHorasMesEquipe > 0 ? `${pctConcluido}% concluído · ${analLabel}` : null,
       accent: totalHorasFaltantes > 0 ? 'er' : 'success',
     },
     {
       id:     'fechamento',
       icon:   CalendarCheck,
-      label:  'Fechamento Dia e Data',
-      value:  diasUteisAteHoje > 0 ? formatHoras(totalHorasFechamento) : '--',
+      label:  selectedAnalista ? `Meta do Dia · ${aliasName(selectedAnalista)}` : 'Meta do Dia',
+      value:  diasUteisAteHoje > 0 ? formatHoras(metaDiaCard) : '--',
       detail: `${hojeFormatado}${diasUteisAteHoje > 0 ? ` · ${diasUteisAteHoje} dias úteis` : ''}`,
       accent: 'info',
     },
@@ -249,6 +438,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
                     value={card.value}
                     detail={card.detail}
                     accent={card.accent}
+                    tooltip={card.tooltip}
                     pinned
                     onTogglePin={() => togglePin(card.id)}
                   />
@@ -288,6 +478,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
                   value={card.value}
                   detail={card.detail}
                   accent={card.accent}
+                  tooltip={card.tooltip}
                   pinned={false}
                   onTogglePin={() => togglePin(card.id)}
                 />
@@ -302,6 +493,9 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
                 forceCollapsed={chartsCollapsed}
                 title="Analistas"
                 tooltipLabel="Total de horas"
+                tooltipData={tooltipAnalistaData}
+                ausentesHoje={analistasAusentesNoPeriodo}
+                onSelectKey={handleSelectAnalista}
                 perColumnLines={[
                   {
                     // Meta do Mês individual: (diasUteis - dayoffs - férias) × horasPorDia

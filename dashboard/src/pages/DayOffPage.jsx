@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Sun, Moon, Plus, Trash2, Pencil, Check, X, Settings2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -64,7 +64,6 @@ function GearMenu({ onEditar, onRemover }) {
   );
 }
 
-import { ANALISTAS } from '../utils/nameAliases.js';
 import { EQUIPE_MAP } from '../utils/equipeList.js';
 import DatePicker from '../components/datepicker/DatePicker.jsx';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
@@ -91,9 +90,18 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
   const { registros, loading, error, incluir, editar, remover } = useDayOffs();
 
-  // Equipe vem direto do EQUIPE_MAP pelo alias do analista selecionado
-  const alias  = ANALISTAS.find((a) => a.fullName === analista)?.alias ?? '';
-  const equipe = alias ? (EQUIPE_MAP[alias] || '—') : '';
+  const [analistas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('config_analistas') || '[]'); }
+    catch { return []; }
+  });
+  const analistasAtivos = useMemo(
+    () => analistas.filter(a => a.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)),
+    [analistas],
+  );
+
+  // Equipe vem do Registro de Analistas (fallback: EQUIPE_MAP)
+  const alias  = analista;
+  const equipe = alias ? (analistasAtivos.find(a => a.nome === alias)?.equipe || EQUIPE_MAP[alias] || '—') : '';
 
   async function handleIncluir() {
     if (!analista || !dataInicio || !dataFim || !tipoAbono) return;
@@ -111,9 +119,8 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
   function handleEditar(r) {
     setEditingId(r.id);
-    const found = ANALISTAS.find((a) => a.alias === r.analista);
     setEditFields({
-      analista:   found?.fullName ?? '',
+      analista:   r.analista,
       dataInicio: r.dataInicio,
       dataFim:    r.dataFim,
       tipoAbono:  r.tipoAbono,
@@ -123,8 +130,8 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
   async function handleSalvar(id) {
     const f = editFields;
     if (!f.analista || !f.dataInicio || !f.dataFim || !f.tipoAbono) return;
-    const editAlias  = ANALISTAS.find((a) => a.fullName === f.analista)?.alias ?? f.analista;
-    const editEquipe = EQUIPE_MAP[editAlias] || '—';
+    const editAlias  = f.analista;
+    const editEquipe = analistasAtivos.find(a => a.nome === editAlias)?.equipe || EQUIPE_MAP[editAlias] || '—';
     await editar(id, { analista: editAlias, equipe: editEquipe, dataInicio: f.dataInicio, dataFim: f.dataFim, tipoAbono: f.tipoAbono });
     setEditingId(null);
   }
@@ -158,7 +165,7 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
   const formValid   = analista && dataInicio && dataFim && tipoAbono;
   const editValid   = editFields.analista && editFields.dataInicio && editFields.dataFim && editFields.tipoAbono;
-  const editAlias   = editingId ? (ANALISTAS.find((a) => a.fullName === editFields.analista)?.alias ?? '') : '';
+  const editAlias   = editingId ? (editFields.analista ?? '') : '';
 
   return (
     <div className="dayoff-page">
@@ -204,8 +211,8 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
             <label className="dayoff-label">Analista</label>
             <select className="dayoff-select" value={analista} onChange={(e) => setAnalista(e.target.value)}>
               <option value="">Selecionar...</option>
-              {ANALISTAS.map((a) => (
-                <option key={a.fullName} value={a.fullName}>{a.alias}</option>
+              {analistasAtivos.map((a) => (
+                <option key={a.id ?? a.nome} value={a.nome}>{a.nome}</option>
               ))}
             </select>
           </div>
@@ -308,13 +315,13 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                             onChange={(e) => setEditFields((f) => ({ ...f, analista: e.target.value }))}
                           >
                             <option value="">Selecionar...</option>
-                            {ANALISTAS.map((a) => (
-                              <option key={a.fullName} value={a.fullName}>{a.alias}</option>
+                            {analistasAtivos.map((a) => (
+                              <option key={a.id ?? a.nome} value={a.nome}>{a.nome}</option>
                             ))}
                           </select>
                         </td>
                         <td className="dayoff-td--muted">
-                          {editAlias ? (EQUIPE_MAP[editAlias] || '—') : '—'}
+                          {editAlias ? (analistasAtivos.find(a => a.nome === editAlias)?.equipe || EQUIPE_MAP[editAlias] || '—') : '—'}
                         </td>
                         <td>
                           <DatePicker

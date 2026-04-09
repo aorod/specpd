@@ -5,7 +5,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { ANALISTAS } from '../utils/nameAliases.js';
 import { EQUIPE_MAP } from '../utils/equipeList.js';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { useFerias } from '../hooks/useFerias.js';
@@ -495,11 +494,13 @@ function GanttModal({ registros, onClose }) {
 
 // ── SolicitarFeriasModal ───────────────────────────────────────────────────────
 function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, onClose, initialData, excludeId }) {
+  const regrasAtivas = localStorage.getItem('config_regras_ferias') !== 'false';
   const today    = new Date();
   const todayStr = toISODate(today);
   const isEditing = !!initialData;
 
   const minAllowedDate = useMemo(() => {
+    if (!regrasAtivas) return null;
     const d = new Date(today);
     d.setDate(d.getDate() + 35);
     return toISODate(d);
@@ -510,7 +511,8 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
       const [y, m] = initialData.dataInicio.split('-').map(Number);
       return { year: y, month: m - 1 };
     }
-    const d = new Date(today); d.setDate(d.getDate() + 35);
+    const d = new Date(today);
+    if (regrasAtivas) d.setDate(d.getDate() + 35);
     return { year: d.getFullYear(), month: d.getMonth() };
   }, []);
 
@@ -626,7 +628,7 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
   }
 
   const canSubmit = rangeStart && rangeEnd && diasCorridosSelecionados > 0
-    && requirements !== null && Object.values(requirements).every(Boolean);
+    && (!regrasAtivas || (requirements !== null && Object.values(requirements).every(Boolean)));
 
   return (
     <div className="fmodal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -790,29 +792,31 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
           </div>
 
           {/* Right column — requirements */}
-          <div className="fmodal-col-right">
-            <p className="fmodal-req-title">
-              O período de férias precisa atender aos seguintes requisitos:
-            </p>
-            <div className="fmodal-req-list">
-              <ReqItem ok={requirements?.notExceedSaldo}
-                text="Os dias selecionados não devem exceder o saldo disponível." />
-              <ReqItem ok={requirements?.minimo5dias}
-                text="É necessário solicitar no mínimo 5 dias." />
-              <ReqItem ok={requirements?.sobraMaior5}
-                text="Não pode ter sobra de saldo menor que 5 dias." />
-              <ReqItem ok={requirements?.notAntesDeHoliday}
-                text="O início do gozo das férias não pode ocorrer durante o período de dois dias que antecede um feriado." />
-              <ReqItem ok={requirements?.periodo14dias}
-                text="É necessário ter um período com pelo menos 14 dias." />
-              <ReqItem ok={requirements?.diaPermitido}
-                text="De acordo com a política da empresa, os dias permitidos para iniciar as férias são Segunda-feira, Terça-feira e Quarta-feira." />
-              <ReqItem ok={requirements?.notIntercede}
-                text="A data solicitada não pode interceder diferentes períodos concessivos." />
-              <ReqItem ok={requirements?.antecedencia35dias}
-                text="A solicitação de férias deve ser feita com pelo menos 35 dias de antecedência." />
+          {regrasAtivas && (
+            <div className="fmodal-col-right">
+              <p className="fmodal-req-title">
+                O período de férias precisa atender aos seguintes requisitos:
+              </p>
+              <div className="fmodal-req-list">
+                <ReqItem ok={requirements?.notExceedSaldo}
+                  text="Os dias selecionados não devem exceder o saldo disponível." />
+                <ReqItem ok={requirements?.minimo5dias}
+                  text="É necessário solicitar no mínimo 5 dias." />
+                <ReqItem ok={requirements?.sobraMaior5}
+                  text="Não pode ter sobra de saldo menor que 5 dias." />
+                <ReqItem ok={requirements?.notAntesDeHoliday}
+                  text="O início do gozo das férias não pode ocorrer durante o período de dois dias que antecede um feriado." />
+                <ReqItem ok={requirements?.periodo14dias}
+                  text="É necessário ter um período com pelo menos 14 dias." />
+                <ReqItem ok={requirements?.diaPermitido}
+                  text="De acordo com a política da empresa, os dias permitidos para iniciar as férias são Segunda-feira, Terça-feira e Quarta-feira." />
+                <ReqItem ok={requirements?.notIntercede}
+                  text="A data solicitada não pode interceder diferentes períodos concessivos." />
+                <ReqItem ok={requirements?.antecedencia35dias}
+                  text="A solicitação de férias deve ser feita com pelo menos 35 dias de antecedência." />
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
 
@@ -850,7 +854,16 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
   const { registros, loading, error, incluir, editar, remover } = useFerias();
 
-  const alias = ANALISTAS.find(a => a.fullName === analistaSelecionado)?.alias ?? '';
+  const [analistas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('config_analistas') || '[]'); }
+    catch { return []; }
+  });
+  const analistasAtivos = useMemo(
+    () => analistas.filter(a => a.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)),
+    [analistas],
+  );
+
+  const alias = analistaSelecionado;
 
   const modalAlias = editingRecord ? editingRecord.analista : alias;
 
@@ -875,7 +888,7 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
         antecipar13,
       });
     } else {
-      const equipe = EQUIPE_MAP[alias] || '—';
+      const equipe = analistasAtivos.find(a => a.nome === alias)?.equipe || EQUIPE_MAP[alias] || '—';
       await incluir({ analista: alias, equipe, dataInicio, dataFim, tipo: 'Férias Programadas', observacao: justificativa || null, status: STATUS_FERIAS[0], vendaFerias, antecipar13 });
     }
     setModalOpen(false);
@@ -952,8 +965,8 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
               onChange={e => setAnalistaSelecionado(e.target.value)}
             >
               <option value="">Selecionar...</option>
-              {ANALISTAS.map(a => (
-                <option key={a.fullName} value={a.fullName}>{a.alias}</option>
+              {analistasAtivos.map(a => (
+                <option key={a.id ?? a.nome} value={a.nome}>{a.nome}</option>
               ))}
             </select>
           </div>

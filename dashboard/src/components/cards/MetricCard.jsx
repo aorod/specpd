@@ -30,12 +30,12 @@ function useCountUp(target, duration = 600) {
   return count;
 }
 
-export default function MetricCard({ icon: Icon, label, value, detail, accent, pinned, onTogglePin, suffix }) {
+export default function MetricCard({ icon: Icon, label, value, detail, accent, pinned, onTogglePin, suffix, tooltip }) {
   const isString = typeof value === 'string';
   const animated = useCountUp(isString ? 0 : value);
 
   return (
-    <div className={`metric-card metric-card--${accent}`}>
+    <div className={`metric-card metric-card--${accent}${tooltip ? ' metric-card--has-tooltip' : ''}`}>
       <div className="metric-card-icon">
         <Icon size={18} />
       </div>
@@ -57,6 +57,20 @@ export default function MetricCard({ icon: Icon, label, value, detail, accent, p
       >
         {pinned ? <PinOff size={13} /> : <Pin size={13} />}
       </button>
+      {tooltip && tooltip.length > 0 && (
+        <div className="metric-card-tooltip" role="tooltip">
+          {tooltip.map((pair, i) => (
+            <div key={i} className="metric-card-tooltip-row">
+              {pair.map((cell, j) => (
+                <div key={j} className="metric-card-tooltip-cell">
+                  <span className="metric-card-tooltip-value">{cell.value}</span>
+                  <span className="metric-card-tooltip-label">{cell.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
