@@ -172,7 +172,7 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, setSin
 
         <button className="filter-visibility-btn" onClick={onToggleCharts}>
           {chartsCollapsed ? <Eye size={12} /> : <EyeOff size={12} />}
-          {chartsCollapsed ? 'Exibir Informações' : 'Ocultar Informações'}
+          {chartsCollapsed ? 'Exibir Gráficos' : 'Ocultar Gráficos'}
         </button>
 
         {hasAnyFilter && (

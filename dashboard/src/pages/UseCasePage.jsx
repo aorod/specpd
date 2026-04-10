@@ -17,7 +17,7 @@ import './UseCasePage.css';
 export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useUCData();
   const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
   const [chartsCollapsed, setChartsCollapsed] = useState(false);

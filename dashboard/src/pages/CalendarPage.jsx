@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Sun, Moon, ChevronDown } from 'lucide-react';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { api } from '../api/localClient.js';
@@ -153,8 +153,17 @@ export const CalendarContent = forwardRef(function CalendarContent({ onSaved }, 
   const [savedPontoFac, setSavedPontoFac] = useState(new Map());
   const [showModal, setShowModal]       = useState(false);
   const [toastMsg, setToastMsg]         = useState(null);
+  const [history, setHistory]           = useState([]);
+  const [showUndoToast, setShowUndoToast] = useState(false);
+  const undoTimerRef = useRef(null);
 
   const municipalHolidays = useMemo(() => getRioMunicipalHolidays(ano), [ano]);
+
+  const pendingCount = useMemo(() => {
+    const toAdd    = [...pontoFacultativo].filter(d => !savedPontoFac.has(d));
+    const toRemove = [...savedPontoFac.keys()].filter(d => !pontoFacultativo.has(d));
+    return toAdd.length + toRemove.length;
+  }, [pontoFacultativo, savedPontoFac]);
 
   useEffect(() => {
     setLoading(true);
@@ -185,14 +194,34 @@ export const CalendarContent = forwardRef(function CalendarContent({ onSaved }, 
     setTimeout(() => setToastMsg(null), 3000);
   }
 
+  useEffect(() => {
+    if (pendingCount === 0) {
+      setHistory([]);
+      setShowUndoToast(false);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    }
+  }, [pendingCount]);
+
   function togglePontoFac(iso) {
     if (!canAdicionar) return;
+    setHistory(prev => [...prev, iso]);
     setPontoFac((prev) => {
       const next = new Set(prev);
       if (next.has(iso)) next.delete(iso);
       else next.add(iso);
       return next;
     });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setShowUndoToast(true);
+    undoTimerRef.current = setTimeout(() => setShowUndoToast(false), 5000);
+  }
+
+  function handleUndo() {
+    if (history.length === 0) return;
+    setPontoFac(new Set(savedPontoFac.keys()));
+    setHistory([]);
+    setShowUndoToast(false);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
 
   useImperativeHandle(ref, () => ({ save: handleSaveClick }));
@@ -307,7 +336,20 @@ export const CalendarContent = forwardRef(function CalendarContent({ onSaved }, 
         />
       )}
 
-      {/* ── Toast ──────────────────────────────────────────────────── */}
+      {/* ── Toast de seleção com desfazer ──────────────────────────── */}
+      {showUndoToast && pendingCount > 0 && (
+        <div className="cal-toast cal-toast--undo">
+          <span>
+            {pendingCount} {pendingCount === 1 ? 'data selecionada' : 'datas selecionadas'}
+          </span>
+          <span className="cal-toast-divider" />
+          <button className="cal-toast-undo-btn" onClick={handleUndo}>
+            Desfazer
+          </button>
+        </div>
+      )}
+
+      {/* ── Toast de mensagem simples ───────────────────────────────── */}
       {toastMsg && (
         <div className="cal-toast">{toastMsg}</div>
       )}

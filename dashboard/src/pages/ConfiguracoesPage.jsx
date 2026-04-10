@@ -56,13 +56,17 @@ function UserModal({ user, onClose, onSaved }) {
   const [ativo,  setAtivo]  = useState(user?.ativo !== 0);
   const [error,  setError]  = useState('');
   const [saving, setSaving] = useState(false);
+  const [phase,  setPhase]  = useState('form');
 
-  async function handleSave(e) {
+  function handleValidate(e) {
     e.preventDefault();
     setError('');
     if (!nome.trim() || !email.trim()) { setError('Nome e e-mail são obrigatórios'); return; }
     if (!isEdit && !senha) { setError('A senha é obrigatória para novos usuários'); return; }
+    setPhase('confirm');
+  }
 
+  async function handleConfirmedSave() {
     setSaving(true);
     try {
       const payload = { nome: nome.trim(), email: email.trim(), papel, ativo };
@@ -75,10 +79,37 @@ function UserModal({ user, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
+      setPhase('form');
       setError(err.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  if (phase === 'confirm') {
+    return (
+      <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget) setPhase('form'); }}>
+        <div className="umodal-card umodal-card--sm">
+          <div className="umodal-header">
+            <h2 className="umodal-title">{isEdit ? 'Confirmar alterações' : 'Confirmar criação'}</h2>
+            <button className="umodal-close" onClick={() => setPhase('form')}><X size={16} /></button>
+          </div>
+          <p className="umodal-confirm-text">
+            {isEdit
+              ? <><strong>{nome}</strong> terá seus dados atualizados.<br />As alterações entrarão em vigor imediatamente.</>
+              : <>O usuário <strong>{nome}</strong> será criado.<br />Ele receberá acesso ao sistema imediatamente.</>
+            }
+          </p>
+          <div className="umodal-actions">
+            <button className="umodal-btn umodal-btn--cancel" onClick={() => setPhase('form')} disabled={saving}>Cancelar</button>
+            <button className="umodal-btn umodal-btn--save" onClick={handleConfirmedSave} disabled={saving}>
+              {saving ? <span className="umodal-spinner" /> : <Check size={14} />}
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -89,7 +120,7 @@ function UserModal({ user, onClose, onSaved }) {
           <button className="umodal-close" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
         </div>
 
-        <form className="umodal-form" onSubmit={handleSave} noValidate>
+        <form className="umodal-form" onSubmit={handleValidate} noValidate>
 
           <div className="umodal-field">
             <label className="umodal-label">Nome *</label>
@@ -235,8 +266,10 @@ function AnalistaModal({ analista, analistas, onClose, onSaved }) {
   const [equipe, setEquipe] = useState(analista?.equipe || '');
   const [ativo,  setAtivo]  = useState(analista?.ativo !== false);
   const [error,  setError]  = useState('');
+  const [phase,  setPhase]  = useState('form');
+  const [pendingData, setPendingData] = useState(null);
 
-  function handleSave(e) {
+  function handleValidate(e) {
     e.preventDefault();
     if (!nome.trim()) { setError('Nome é obrigatório'); return; }
     if (!isEdit) {
@@ -247,7 +280,37 @@ function AnalistaModal({ analista, analistas, onClose, onSaved }) {
         return;
       }
     }
-    onSaved({ id: analista?.id ?? Date.now(), nome: nome.trim(), equipe: equipe.trim(), ativo });
+    setPendingData({ id: analista?.id ?? Date.now(), nome: nome.trim(), equipe: equipe.trim(), ativo });
+    setPhase('confirm');
+  }
+
+  function handleConfirmedSave() {
+    onSaved(pendingData);
+  }
+
+  if (phase === 'confirm') {
+    return (
+      <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget) setPhase('form'); }}>
+        <div className="umodal-card umodal-card--sm">
+          <div className="umodal-header">
+            <h2 className="umodal-title">{isEdit ? 'Confirmar alterações' : 'Confirmar inclusão'}</h2>
+            <button className="umodal-close" onClick={() => setPhase('form')}><X size={16} /></button>
+          </div>
+          <p className="umodal-confirm-text">
+            {isEdit
+              ? <><strong>{nome}</strong> terá seus dados atualizados.<br />As alterações entrarão em vigor imediatamente.</>
+              : <>O analista <strong>{nome}</strong> será incluído.<br />Ele ficará disponível para alocação.</>
+            }
+          </p>
+          <div className="umodal-actions">
+            <button className="umodal-btn umodal-btn--cancel" onClick={() => setPhase('form')}>Cancelar</button>
+            <button className="umodal-btn umodal-btn--save" onClick={handleConfirmedSave}>
+              <Check size={14} />Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -257,7 +320,7 @@ function AnalistaModal({ analista, analistas, onClose, onSaved }) {
           <h2 className="umodal-title">{isEdit ? 'Editar Analista' : 'Novo Analista'}</h2>
           <button className="umodal-close" onClick={onClose}><X size={16} /></button>
         </div>
-        <form className="umodal-form" onSubmit={handleSave} noValidate>
+        <form className="umodal-form" onSubmit={handleValidate} noValidate>
           <div className="umodal-field">
             <label className="umodal-label">Nome *</label>
             <input className="umodal-input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do analista" />
@@ -565,7 +628,16 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
 
   function handleRegrasFerias(ativo) {
     setRegrasFerias(ativo);
-    localStorage.setItem(regrasKey, String(ativo));
+  }
+
+  // ── Timesheets: Reposicionar Gráficos ──────────────────────────────────────
+  const reposicionarKey = 'config_reposicionar_graficos';
+  const [reposicionarGraficos, setReposicionarGraficos] = useState(
+    () => localStorage.getItem(reposicionarKey) !== 'false'
+  );
+
+  function handleReposicionarGraficos(ativo) {
+    setReposicionarGraficos(ativo);
   }
 
   // ── Analistas ──────────────────────────────────────────────────────────────
@@ -621,7 +693,19 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
     save() {
       if (horasPorDia === '' || isNaN(Number(horasPorDia))) return false;
       localStorage.setItem(storageKey, horasPorDia);
+      localStorage.setItem(regrasKey, String(regrasFerias));
+      localStorage.setItem(reposicionarKey, String(reposicionarGraficos));
       return true;
+    },
+    isDirty() {
+      const savedHpd         = localStorage.getItem(storageKey) ?? '8';
+      const savedRegras      = localStorage.getItem(regrasKey) !== 'false';
+      const savedReposicionar = localStorage.getItem(reposicionarKey) !== 'false';
+      return (
+        horasPorDia !== savedHpd ||
+        regrasFerias !== savedRegras ||
+        reposicionarGraficos !== savedReposicionar
+      );
     },
   }));
 
@@ -829,6 +913,32 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
             </label>
             <label className="cfg-radio-label" onClick={() => handleRegrasFerias(false)}>
               <span className={`cfg-radio-circle${!regrasFerias ? ' cfg-radio-circle--on' : ''}`} />
+              Desativar
+            </label>
+          </div>
+        </div>
+
+        {/* ── Timesheets ────────────────────────────────────────── */}
+        <hr className="cfg-section-divider" />
+        <div className="cfg-subsection-header">
+          <span className="cfg-subsection-title">Timesheets</span>
+        </div>
+
+        <div className="cfg-field-group">
+          <p className="cfg-field-label">Reposicionar Gráficos</p>
+          <p className="cfg-field-hint">
+            Quando ativado, os containers da página Timesheet (Analistas, QTDE TS por Status,
+            Horas por Produtividade e Lista de Timesheets) podem ser reposicionados arrastando
+            pelo cabeçalho de cada container. A ordem é salva automaticamente.
+            Quando desativado, exibe o layout fixo original.
+          </p>
+          <div className="cfg-radio-group">
+            <label className="cfg-radio-label" onClick={() => handleReposicionarGraficos(true)}>
+              <span className={`cfg-radio-circle${reposicionarGraficos ? ' cfg-radio-circle--on' : ''}`} />
+              Ativar
+            </label>
+            <label className="cfg-radio-label" onClick={() => handleReposicionarGraficos(false)}>
+              <span className={`cfg-radio-circle${!reposicionarGraficos ? ' cfg-radio-circle--on' : ''}`} />
               Desativar
             </label>
           </div>
@@ -1276,8 +1386,15 @@ export default function ConfiguracoesPage({ theme, setTheme, menuOpen, onMenuTog
 
   const [activeSection,  setActiveSection]  = useState(defaultSection);
   const [showSaveModal,  setShowSaveModal]  = useState(false);
+  const [confirmSave,    setConfirmSave]    = useState(false);
+  const [toastMsg,       setToastMsg]       = useState(null);
   const formulaRef    = useRef(null);
   const calendarioRef = useRef(null);
+
+  function showToast(msg) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  }
 
   function handleSave() {
     if (activeSection === 'formulas') {
@@ -1360,13 +1477,48 @@ export default function ConfiguracoesPage({ theme, setTheme, menuOpen, onMenuTog
           Voltar
         </button>
         {activeSection !== 'usuarios' && (
-          <button className="cfg-bottom-btn cfg-bottom-btn--save" onClick={handleSave}>
+          <button
+            className="cfg-bottom-btn cfg-bottom-btn--save"
+            onClick={() => {
+              if (activeSection === 'formulas') {
+                if (formulaRef.current?.isDirty()) setConfirmSave(true);
+                else showToast('Nenhuma alteração foi feita para salvar');
+              } else {
+                handleSave();
+              }
+            }}
+          >
             Salvar
           </button>
         )}
       </div>
 
       {showSaveModal && <SaveSuccessModal onClose={() => setShowSaveModal(false)} />}
+
+      {toastMsg && <div className="cal-toast">{toastMsg}</div>}
+
+      {confirmSave && (
+        <div className="umodal-overlay" onClick={e => { if (e.target === e.currentTarget) setConfirmSave(false); }}>
+          <div className="umodal-card umodal-card--sm">
+            <div className="umodal-header">
+              <h2 className="umodal-title">Confirmar alterações</h2>
+              <button className="umodal-close" onClick={() => setConfirmSave(false)}><X size={16} /></button>
+            </div>
+            <p className="umodal-confirm-text">
+              {activeSection === 'formulas'
+                ? <>Deseja salvar as configurações de <strong>Parâmetros Gerais</strong>?<br />As alterações entrarão em vigor imediatamente.</>
+                : <>Deseja salvar as alterações no <strong>Calendário de Feriados</strong>?<br />As alterações entrarão em vigor imediatamente.</>
+              }
+            </p>
+            <div className="umodal-actions">
+              <button className="umodal-btn umodal-btn--cancel" onClick={() => setConfirmSave(false)}>Cancelar</button>
+              <button className="umodal-btn umodal-btn--save" onClick={() => { setConfirmSave(false); handleSave(); }}>
+                <Check size={14} />Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

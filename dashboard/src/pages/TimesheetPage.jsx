@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { CalendarClock, Clock, TrendingDown, CalendarCheck, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { CalendarClock, Clock, TrendingDown, CalendarCheck, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon, GripVertical } from 'lucide-react';
 import { formatHoras } from '../utils/formatters.js';
 import { useTimesheetData } from '../hooks/useTimesheetData.js';
 import { useTimesheetFilters } from '../hooks/useTimesheetFilters.js';
@@ -21,11 +21,21 @@ import './UseCasePage.css';
 export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useTimesheetData();
   const { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, clearFilter, isActive, activeCount } = useTimesheetFilters(rawData);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
   const [chartsCollapsed, setChartsCollapsed] = useState(false);
   const [selectedAnalista, setSelectedAnalista] = useState(null);
+
+  const dragEnabled = localStorage.getItem('config_reposicionar_graficos') !== 'false';
+
+  const [sectionOrder, setSectionOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ts_section_order') || 'null') || ['analistas', 'status', 'atividade', 'tabela']; }
+    catch { return ['analistas', 'status', 'atividade', 'tabela']; }
+  });
+  const dragSrcRef = useRef(null);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
 
   const displayData = useMemo(() => {
     if (!search.trim()) return filteredData;
@@ -207,8 +217,47 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
     }
   }, [filters.equipes]);
 
-  const numAnalistas        = analistasAtivos.length || metrics.porResponsavel.size;
-  const totalHorasMesEquipe = parseFloat((totalHorasMes * Math.max(numAnalistas, 1)).toFixed(2));
+  const numAnalistas = analistasAtivos.length || metrics.porResponsavel.size;
+
+  // ── Deduções de Férias / Atestados / Day Off para o card Total Horas/Mês ────
+  const deducoesHorasMes = useMemo(() => {
+    const calcDias = (dataInicio, dataFim) => {
+      let total = 0;
+      for (const ano of anosEfetivos) {
+        const anoNum   = parseInt(ano, 10);
+        const national = nationalByAno[ano] ?? [];
+        for (const mes of mesesEfetivos) {
+          total += calcDiasUteisNoIntervalo(dataInicio, dataFim, anoNum, parseInt(mes, 10), national, pontoFacDates);
+        }
+      }
+      return total;
+    };
+
+    let feriasD = 0, atestadoD = 0, dayoffD = 0;
+
+    for (const a of analistasAtivos) {
+      const alias = a.nome;
+      for (const f of ferias) {
+        if (f.analista !== alias) continue;
+        if (f.status?.startsWith('Recusado')) continue;
+        feriasD += calcDias(f.dataInicio, f.dataFim);
+      }
+      for (const d of dayoffs) {
+        if (d.analista !== alias) continue;
+        if (d.tipoAbono === 'Atestado') atestadoD += calcDias(d.dataInicio, d.dataFim);
+        else if (d.tipoAbono === 'Day Off') dayoffD += calcDias(d.dataInicio, d.dataFim);
+      }
+    }
+
+    const feriasH   = parseFloat((feriasD   * horasPorDia).toFixed(2));
+    const atestadoH = parseFloat((atestadoD * horasPorDia).toFixed(2));
+    const dayoffH   = parseFloat((dayoffD   * horasPorDia).toFixed(2));
+
+    return { feriasD, atestadoD, dayoffD, feriasH, atestadoH, dayoffH,
+      total: parseFloat((feriasH + atestadoH + dayoffH).toFixed(2)) };
+  }, [analistasAtivos, ferias, dayoffs, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, horasPorDia]);
+
+  const totalHorasMesEquipe = parseFloat((totalHorasMes * Math.max(numAnalistas, 1) - deducoesHorasMes.total).toFixed(2));
   const totalHorasRealizadas = parseFloat(metrics.totalEffort.toFixed(2));
 
   // Horas realizadas considerando apenas ANO, MÊS e EQUIPE (ignora PRODUTO, STATUS, ATIVIDADE, ANALISTA)
@@ -242,71 +291,116 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
 
   // ── Dados para tooltip do card Total Horas/Mês ──────────────────────────────
   const tooltipHorasMes = useMemo(() => {
-    const calcDias = (dataInicio, dataFim) => {
-      let total = 0;
-      for (const ano of anosEfetivos) {
-        const anoNum   = parseInt(ano, 10);
-        const national = nationalByAno[ano] ?? [];
-        for (const mes of mesesEfetivos) {
-          total += calcDiasUteisNoIntervalo(dataInicio, dataFim, anoNum, parseInt(mes, 10), national, pontoFacDates);
-        }
-      }
-      return total;
-    };
+    const { feriasD, atestadoD, dayoffD, feriasH, atestadoH, dayoffH } = deducoesHorasMes;
+    const totalOriginal = parseFloat((diasUteis * numAnalistas * horasPorDia).toFixed(2));
 
-    let feriasD = 0, atestadoD = 0, dayoffD = 0;
-
-    for (const a of analistasAtivos) {
-      const alias = a.nome;
-      for (const f of ferias) {
-        if (f.analista !== alias) continue;
-        if (f.status?.startsWith('Recusado')) continue;
-        feriasD += calcDias(f.dataInicio, f.dataFim);
-      }
-      for (const d of dayoffs) {
-        if (d.analista !== alias) continue;
-        if (d.tipoAbono === 'Atestado') atestadoD += calcDias(d.dataInicio, d.dataFim);
-        else if (d.tipoAbono === 'Day Off') dayoffD += calcDias(d.dataInicio, d.dataFim);
-      }
-    }
-
-    const feriasH    = parseFloat((feriasD    * horasPorDia).toFixed(2));
-    const atestadoH  = parseFloat((atestadoD  * horasPorDia).toFixed(2));
-    const dayoffH    = parseFloat((dayoffD    * horasPorDia).toFixed(2));
-
-    // Pares lado a lado (2 colunas no tooltip)
     const rows = [
       [
         { label: 'Nº Analistas',       value: numAnalistas },
         { label: 'Horas Base',         value: `${horasPorDia}h` },
       ],
       [
-        { label: 'Total Original (h)', value: formatHoras(parseFloat((diasUteis * numAnalistas * horasPorDia).toFixed(2))) },
+        { label: 'Total Original (h)', value: formatHoras(totalOriginal) },
         { label: 'Total Original (d)', value: diasUteis },
       ],
     ];
 
-    if (feriasD > 0 || feriasH > 0) {
+    if (feriasD > 0) {
       rows.push([
-        { label: 'Férias (h)', value: formatHoras(feriasH) },
-        { label: 'Férias (d)', value: feriasD },
+        { label: 'Férias (h)',    value: `- ${formatHoras(feriasH)}` },
+        { label: 'Férias (d)',    value: feriasD },
       ]);
     }
-    if (atestadoD > 0 || atestadoH > 0) {
+    if (atestadoD > 0) {
       rows.push([
-        { label: 'Atestados (h)', value: formatHoras(atestadoH) },
+        { label: 'Atestados (h)', value: `- ${formatHoras(atestadoH)}` },
         { label: 'Atestados (d)', value: atestadoD },
       ]);
     }
-    if (dayoffD > 0 || dayoffH > 0) {
+    if (dayoffD > 0) {
       rows.push([
-        { label: 'Day Off (h)', value: formatHoras(dayoffH) },
-        { label: 'Day Off (d)', value: dayoffD },
+        { label: 'Day Off (h)',   value: `- ${formatHoras(dayoffH)}` },
+        { label: 'Day Off (d)',   value: dayoffD },
       ]);
     }
 
     return rows;
-  }, [analistasAtivos, ferias, dayoffs, anosEfetivos, mesesEfetivos, nationalByAno, pontoFacDates, diasUteis, horasPorDia, numAnalistas]);
+  }, [deducoesHorasMes, diasUteis, horasPorDia, numAnalistas]);
+
+  // ── Drag-and-drop handlers ─────────────────────────────────────────────────
+  const handleDragStart = (e, id) => {
+    dragSrcRef.current = id;
+    setDraggingId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSrcRef.current && dragSrcRef.current !== id) setDragOverId(id);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null);
+  };
+
+  const handleDrop = (e, id) => {
+    e.preventDefault();
+    const src = dragSrcRef.current;
+    if (!src || src === id) { setDragOverId(null); return; }
+    setSectionOrder(prev => {
+      const next = [...prev];
+      const fi = next.indexOf(src);
+      const ti = next.indexOf(id);
+      next.splice(fi, 1);
+      next.splice(ti, 0, src);
+      localStorage.setItem('ts_section_order', JSON.stringify(next));
+      return next;
+    });
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    dragSrcRef.current = null;
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  const SECTION_TITLES = {
+    analistas: 'Analistas',
+    status:    'QTDE TS por Status',
+    atividade: 'Horas por Produtividade',
+    tabela:    'Lista de Timesheets',
+  };
+
+  const renderSectionContent = (id) => {
+    switch (id) {
+      case 'analistas':
+        return (
+          <ColumnChart
+            data={porResponsavelHoras}
+            forceCollapsed={chartsCollapsed}
+            title="Analistas"
+            tooltipLabel="Total de horas"
+            tooltipData={tooltipAnalistaData}
+            ausentesHoje={analistasAusentesNoPeriodo}
+            onSelectKey={handleSelectAnalista}
+            perColumnLines={[
+              { values: metaAnalistaLines.metaMesMap, color: '#3b82f6', label: 'Meta do Mês' },
+              ...(diasUteisAteHoje > 0 ? [{ values: metaAnalistaLines.metaDiaMap, color: '#22c55e', label: 'Meta do Dia', showLabels: false }] : []),
+            ]}
+          />
+        );
+      case 'status':
+        return <StatusDonutChart data={metrics.porStatus} forceCollapsed={chartsCollapsed} />;
+      case 'atividade':
+        return <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />;
+      case 'tabela':
+        return <TimesheetTable data={displayData} />;
+      default:
+        return null;
+    }
+  };
 
   const metaDiaCard = selectedAnalista
     ? metaAnalistaLines.metaDiaMap.get(selectedAnalista) ?? 0
@@ -486,40 +580,50 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
             </section>
           )}
 
-          <section className="charts-grid" aria-label="Gráficos">
-            <div style={{ gridColumn: '1 / -1' }}>
-              <ColumnChart
-                data={porResponsavelHoras}
-                forceCollapsed={chartsCollapsed}
-                title="Analistas"
-                tooltipLabel="Total de horas"
-                tooltipData={tooltipAnalistaData}
-                ausentesHoje={analistasAusentesNoPeriodo}
-                onSelectKey={handleSelectAnalista}
-                perColumnLines={[
-                  {
-                    // Meta do Mês individual: (diasUteis - dayoffs - férias) × horasPorDia
-                    values: metaAnalistaLines.metaMesMap,
-                    color: '#3b82f6',
-                    label: 'Meta do Mês',
-                  },
-                  ...(diasUteisAteHoje > 0 ? [{
-                    // Meta do Dia individual: (diasUteisAteHoje - dayoffs - férias até hoje) × horasPorDia
-                    values: metaAnalistaLines.metaDiaMap,
-                    color: '#22c55e',
-                    label: 'Meta do Dia',
-                    showLabels: false,
-                  }] : []),
-                ]}
-              />
+          {dragEnabled ? (
+            <div className="sections-container">
+              {sectionOrder.map((id) => (
+                <div
+                  key={id}
+                  className={[
+                    'drag-section',
+                    draggingId === id ? 'drag-section--dragging' : '',
+                    dragOverId === id ? 'drag-section--over' : '',
+                  ].filter(Boolean).join(' ')}
+                  onDragOver={(e) => handleDragOver(e, id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, id)}
+                >
+                  <div
+                    className="drag-section-handle"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, id)}
+                    onDragEnd={handleDragEnd}
+                    title="Arraste para reposicionar"
+                  >
+                    <span className="drag-section-title">{SECTION_TITLES[id]}</span>
+                    <GripVertical size={14} className="drag-section-grip" />
+                  </div>
+                  <div className="drag-section-content">
+                    {renderSectionContent(id)}
+                  </div>
+                </div>
+              ))}
             </div>
-            <StatusDonutChart data={metrics.porStatus} forceCollapsed={chartsCollapsed} />
-            <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />
-          </section>
-
-          <section aria-label="Tabela de Timesheets">
-            <TimesheetTable data={displayData} />
-          </section>
+          ) : (
+            <>
+              <section className="charts-grid" aria-label="Gráficos">
+                <div style={{ gridColumn: '1 / -1' }}>
+                  {renderSectionContent('analistas')}
+                </div>
+                {renderSectionContent('status')}
+                {renderSectionContent('atividade')}
+              </section>
+              <section aria-label="Tabela de Timesheets">
+                {renderSectionContent('tabela')}
+              </section>
+            </>
+          )}
         </main>
       )}
     </div>

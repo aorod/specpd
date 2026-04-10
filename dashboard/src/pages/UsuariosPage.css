@@ -725,6 +725,7 @@
 
 .umodal-card--sm .umodal-actions {
   justify-content: center;
+  padding: 0 22px 20px;
 }
 
 .umodal-btn {

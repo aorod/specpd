@@ -290,3 +290,69 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Drag-and-drop sections ─────────────────────────────────────────── */
+.sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drag-section {
+  border-radius: 10px;
+  border: 2px solid transparent;
+  transition: opacity 200ms, border-color 150ms;
+}
+
+.drag-section--dragging {
+  opacity: 0.38;
+}
+
+.drag-section--over {
+  border-color: var(--color-accent, #3b82f6);
+}
+
+.drag-section-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 4px;
+  cursor: grab;
+  user-select: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.drag-section-handle:active {
+  cursor: grabbing;
+}
+
+.drag-section-handle:hover {
+  background: var(--color-surface-2, rgba(0,0,0,0.04));
+}
+
+.drag-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+}
+
+.drag-section-grip {
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 150ms;
+  flex-shrink: 0;
+}
+
+.drag-section:hover .drag-section-grip {
+  opacity: 0.6;
+}
+
+.drag-section-handle:hover .drag-section-grip {
+  opacity: 1;
+}
+
+.drag-section-content {
+  /* inherits block layout */
+}

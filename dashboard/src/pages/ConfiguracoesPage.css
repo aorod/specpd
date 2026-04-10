@@ -905,6 +905,22 @@
   margin: 4px 0;
 }
 
+/* ─── Cabeçalho de subseção (ex: Timesheets) ─────────────────── */
+.cfg-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.cfg-subsection-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
 /* ─── Gear menu (dropdown de ações) ──────────────────────────── */
 @keyframes dp-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.97); }
