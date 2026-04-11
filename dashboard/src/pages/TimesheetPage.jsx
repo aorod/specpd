@@ -44,17 +44,40 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
   }, [filteredData, search]);
 
   const metrics = useTimesheetMetrics(displayData);
+
+  // Dataset para o gráfico de analistas: aplica todos os filtros EXCETO responsaveis,
+  // para que todas as barras permaneçam visíveis ao clicar em um analista.
+  const filteredDataForChart = useMemo(() => {
+    if (!search.trim() && filters.responsaveis.length === 0) return filteredData;
+    return rawData.filter((item) => {
+      if (filters.anos.length > 0       && !filters.anos.includes(item.ano))        return false;
+      if (filters.meses.length > 0      && !filters.meses.includes(item.mes))       return false;
+      if (filters.states.length > 0     && !filters.states.includes(item.state))    return false;
+      if (filters.produtos.length > 0   && !filters.produtos.includes(item.produto)) return false;
+      if (filters.equipes.length > 0) {
+        const val = item.equipe || 'Sem Equipe';
+        if (!filters.equipes.includes(val)) return false;
+      }
+      if (filters.atividades.length > 0) {
+        const val = item.atividade || 'Sem Atividade';
+        if (!filters.atividades.includes(val)) return false;
+      }
+      return true;
+    });
+  }, [rawData, filteredData, search, filters.responsaveis, filters.anos, filters.meses, filters.states, filters.produtos, filters.equipes, filters.atividades]);
+
+  const metricsForChart = useTimesheetMetrics(filteredDataForChart);
   const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje, nationalByAno, pontoFacDates, anosEfetivos, mesesEfetivos } = useWorkdaysCalc(filters);
   const { registros: dayoffs } = useDayOffs();
   const { registros: ferias }  = useFerias();
 
   const porResponsavelHoras = useMemo(() => {
     const map = new Map();
-    for (const [key, val] of metrics.porResponsavel.entries()) {
+    for (const [key, val] of metricsForChart.porResponsavel.entries()) {
       map.set(key, { total: parseFloat(val.totalEffort.toFixed(2)) });
     }
     return map;
-  }, [metrics.porResponsavel]);
+  }, [metricsForChart.porResponsavel]);
 
   const porAtividadeHoras = useMemo(() => {
     const map = new Map();
