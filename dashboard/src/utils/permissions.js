@@ -11,6 +11,7 @@ export const PERMISSOES_PERFIL = {
     calendario:    ['acessar', 'adicionar', 'remover'],
     configuracoes: ['acessar', 'editar_integracoes', 'gerenciar_sync'],
     usuarios:      ['acessar', 'criar', 'editar', 'excluir', 'gerenciar_permissoes'],
+    perfil:        ['acessar'],
   },
   gestor: {
     dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'exportar'],
@@ -20,6 +21,7 @@ export const PERMISSOES_PERFIL = {
     calendario:    ['acessar', 'adicionar', 'remover'],
     configuracoes: ['acessar'],
     usuarios:      [],
+    perfil:        ['acessar'],
   },
   coordenador: {
     dashboard:     ['acessar', 'casos_de_uso', 'analytics'],
@@ -29,6 +31,7 @@ export const PERMISSOES_PERFIL = {
     calendario:    ['acessar'],
     configuracoes: [],
     usuarios:      [],
+    perfil:        ['acessar'],
   },
   analista: {
     dashboard:     ['acessar', 'casos_de_uso', 'analytics'],
@@ -38,6 +41,7 @@ export const PERMISSOES_PERFIL = {
     calendario:    ['acessar'],
     configuracoes: [],
     usuarios:      [],
+    perfil:        ['acessar'],
   },
 };
 
@@ -86,6 +90,9 @@ export const ACOES_POR_MODULO = {
     { key: 'excluir',              label: 'Excluir usuário' },
     { key: 'gerenciar_permissoes', label: 'Gerenciar permissões' },
   ],
+  perfil: [
+    { key: 'acessar', label: 'Acessar página' },
+  ],
 };
 
 export const MODULOS = [
@@ -96,6 +103,7 @@ export const MODULOS = [
   { key: 'calendario',    label: 'Calendário' },
   { key: 'configuracoes', label: 'Configurações' },
   { key: 'usuarios',      label: 'Usuários & Permissões' },
+  { key: 'perfil',        label: 'Perfil' },
 ];
 
 /**

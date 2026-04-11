@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { UserCircle2, Settings, LogOut } from 'lucide-react';
+import { UserCircle2, User, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './ProfileMenu.css';
 
 export default function ProfileMenu({ onNavigate }) {
-  const { user, logout, can } = useAuth();
+  const { user, logout, can, avatarUrl } = useAuth();
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, right: 0 });
   const btnRef  = useRef(null);
@@ -39,12 +39,15 @@ export default function ProfileMenu({ onNavigate }) {
     <>
       <button
         ref={btnRef}
-        className={`profile-btn${open ? ' is-open' : ''}`}
+        className={`profile-btn${open ? ' is-open' : ''}${avatarUrl ? ' profile-btn--has-avatar' : ''}`}
         onClick={handleOpen}
         aria-label="Perfil"
         title={user?.nome || 'Perfil'}
       >
-        <UserCircle2 size={18} />
+        {avatarUrl
+          ? <img className="profile-btn-avatar" src={avatarUrl} alt="Avatar" />
+          : <UserCircle2 size={18} />
+        }
       </button>
 
       {open && (
@@ -61,6 +64,14 @@ export default function ProfileMenu({ onNavigate }) {
           )}
 
           <div className="profile-divider" />
+
+          <button
+            className="profile-item"
+            onClick={() => { setOpen(false); onNavigate?.('perfil'); }}
+          >
+            <User size={14} />
+            Perfil
+          </button>
 
           {can('configuracoes', 'acessar') && (
             <>

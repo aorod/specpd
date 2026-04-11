@@ -464,6 +464,24 @@
   max-width: 900px;
 }
 
+.cfg-panel--usuarios .cfg-panel-header {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 16px;
+}
+
+.cfg-panel--usuarios .cfg-panel-body {
+  gap: 14px;
+}
+
+.cfg-panel--usuarios .cfg-panel-body > .cfg-field-group {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  gap: 16px;
+}
+
 .cfg-field-group--table {
   gap: 16px;
 }
@@ -919,6 +937,36 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
+}
+
+/* ─── Parâmetros Gerais: card layout ─────────────────────────── */
+.cfg-panel--formula .cfg-panel-header {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 16px;
+}
+
+.cfg-panel--formula .cfg-panel-body {
+  gap: 14px;
+}
+
+.cfg-panel--formula .cfg-panel-body > .cfg-field-group {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  gap: 8px;
+}
+
+.cfg-panel--formula .cfg-panel-body > .cfg-field-group--table {
+  gap: 16px;
+}
+
+/* ─── Cabeçalho interno de card (ex: "Timesheets" dentro do card) */
+.cfg-card-section-header {
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* ─── Gear menu (dropdown de ações) ──────────────────────────── */

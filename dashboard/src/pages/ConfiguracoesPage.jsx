@@ -901,6 +901,9 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
 
         {/* ── Regras de Férias ──────────────────────────────────── */}
         <div className="cfg-field-group">
+          <div className="cfg-card-section-header">
+            <span className="cfg-subsection-title">Férias</span>
+          </div>
           <p className="cfg-field-label">Regras de Férias</p>
           <p className="cfg-field-hint">
             Quando ativado, a solicitação de férias valida todos os requisitos obrigatórios da política da empresa.
@@ -919,12 +922,10 @@ const FormulaPanel = forwardRef(function FormulaPanel(_, ref) {
         </div>
 
         {/* ── Timesheets ────────────────────────────────────────── */}
-        <hr className="cfg-section-divider" />
-        <div className="cfg-subsection-header">
-          <span className="cfg-subsection-title">Timesheets</span>
-        </div>
-
         <div className="cfg-field-group">
+          <div className="cfg-card-section-header">
+            <span className="cfg-subsection-title">Timesheets</span>
+          </div>
           <p className="cfg-field-label">Reposicionar Gráficos</p>
           <p className="cfg-field-hint">
             Quando ativado, os containers da página Timesheet (Analistas, QTDE TS por Status,
@@ -1229,9 +1230,12 @@ function UsuariosPanel() {
 
         {/* ── Seção: Usuários ─────────────────────────────────── */}
         <div className="cfg-field-group cfg-field-group--table">
+          <div className="cfg-card-section-header">
+            <span className="cfg-subsection-title">Usuários</span>
+          </div>
           <div className="cfg-field-group-top">
             <div>
-              <p className="cfg-field-label">Usuários</p>
+              <p className="cfg-field-label">Usuários cadastrados</p>
               <p className="cfg-field-hint">Cadastre e gerencie os usuários com acesso ao sistema.</p>
             </div>
           </div>

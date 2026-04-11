@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]         = useState(null);
   const [loading, setLoading]   = useState(true);
   const [userPerms, setUserPerms] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   // Valida o token salvo ao carregar a aplicação
   useEffect(() => {
@@ -25,10 +26,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (user?.id) {
       setUserPerms(loadUserPermissions(user.id));
+      setAvatarUrl(localStorage.getItem(`specpd_avatar_${user.id}`) || null);
     } else {
       setUserPerms(null);
+      setAvatarUrl(null);
     }
   }, [user?.id]);
+
+  function updateAvatar(base64) {
+    if (user?.id) {
+      localStorage.setItem(`specpd_avatar_${user.id}`, base64);
+      setAvatarUrl(base64);
+    }
+  }
 
   function login(token, userData) {
     localStorage.setItem(TOKEN_KEY, token);
@@ -56,7 +66,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, can, refreshPermissions }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, can, refreshPermissions, avatarUrl, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   );

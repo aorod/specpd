@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
+      "Bash(xargs grep:*)",
+      "Bash(wc -l \"c:/Users/anderson.oliveira/OneDrive - VECTOR/Documentos/Projetos Claude/specpd/dashboard/src/pages/\"*.jsx)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const c=require\\('crypto'\\);console.log\\(c.randomBytes\\(48\\).toString\\('hex'\\)\\)\")",
+      "Bash(timeout 5 node index.js)"
+    ]
+  }
+}

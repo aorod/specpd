@@ -11,6 +11,7 @@ import FeriasPage from './pages/FeriasPage.jsx';
 import DayOffPage from './pages/DayOffPage.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
 import ConfiguracoesPage from './pages/ConfiguracoesPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
 
 // Permissão necessária para acessar cada página
 const PAGE_PERMISSIONS = {
@@ -74,6 +75,7 @@ export default function App() {
         {activePage === 'dayoff'         && <DayOffPage     theme={theme} setTheme={setTheme} {...menuProps} />}
         {activePage === 'calendario'     && <CalendarPage   theme={theme} setTheme={setTheme} {...menuProps} />}
         {activePage === 'configuracoes'  && <ConfiguracoesPage theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'perfil'          && <ProfilePage       theme={theme} setTheme={setTheme} {...menuProps} />}
       </div>
     </div>
   );
