@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, Plus } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, Plus, X, CheckCircle, AlertCircle, Loader, Settings2, Pencil } from 'lucide-react';
 import { formatMesLabel, formatHoras } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
 import { useSort } from '../../hooks/useSort.js';
@@ -8,6 +9,334 @@ import './TimesheetTable.css';
 const PAGE_SIZES = [10, 25, 50, 100];
 const MAX_PAGE_BTNS = 10;
 const ADO_BASE = 'https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/edit/';
+
+const MESES = [
+  { value: '01 - Janeiro',  label: 'Janeiro'   },
+  { value: '02 - Fevereiro',label: 'Fevereiro' },
+  { value: '03 - Março',    label: 'Março'     },
+  { value: '04 - Abril',    label: 'Abril'     },
+  { value: '05 - Maio',     label: 'Maio'      },
+  { value: '06 - Junho',    label: 'Junho'     },
+  { value: '07 - Julho',    label: 'Julho'     },
+  { value: '08 - Agosto',   label: 'Agosto'    },
+  { value: '09 - Setembro', label: 'Setembro'  },
+  { value: '10 - Outubro',  label: 'Outubro'   },
+  { value: '11 - Novembro', label: 'Novembro'  },
+  { value: '12 - Dezembro', label: 'Dezembro'  },
+];
+
+const THIS_YEAR  = new Date().getFullYear();
+const ANOS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map(String);
+
+// ── GearMenu ────────────────────────────────────────────────────────────────────
+function GearMenu({ onEditar }) {
+  const [open, setOpen] = useState(false);
+  const [pos,  setPos]  = useState({ top: 0, left: 0 });
+  const btnRef  = useRef(null);
+  const dropRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e) {
+      if (
+        btnRef.current  && !btnRef.current.contains(e.target) &&
+        dropRef.current && !dropRef.current.contains(e.target)
+      ) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  function handleOpen() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      // aparece à esquerda do botão, alinhado verticalmente com ele
+      setPos({ top: rect.top, right: window.innerWidth - rect.left + 4 });
+    }
+    setOpen(o => !o);
+  }
+
+  return (
+    <div className="gear-root">
+      <button ref={btnRef} className={`gear-btn${open ? ' is-open' : ''}`} onClick={handleOpen} title="Ações">
+        <Settings2 size={15} />
+      </button>
+      {open && createPortal(
+        <div ref={dropRef} className="gear-dropdown" style={{ top: pos.top, right: pos.right }}>
+          <button className="gear-item gear-item--edit" onClick={() => { onEditar(); setOpen(false); }}>
+            <Pencil size={13} /> Editar
+          </button>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// mode: 'create' | 'edit'   item: objeto do timesheet (só no modo edit)
+function TimesheetModal({ onClose, dataOptions, mode = 'create', item = null }) {
+  const isEdit = mode === 'edit';
+  const hoje   = new Date();
+
+  // Para edit: mapeia item.mes ("04") para o value da picklist ("04 - Abril")
+  const mesInicial = isEdit
+    ? (MESES.find(m => m.value.startsWith(item.mes + ' '))?.value ?? MESES[hoje.getMonth()].value)
+    : (MESES[hoje.getMonth()]?.value ?? MESES[0].value);
+
+  const [titulo,    setTitulo]    = useState(isEdit ? (item.title    ?? '') : '');
+  const [analista,  setAnalista]  = useState(isEdit ? (item.assignedTo ?? '') : '');
+  const [mes,       setMes]       = useState(mesInicial);
+  const [ano,       setAno]       = useState(isEdit ? (item.ano ?? String(hoje.getFullYear())) : String(hoje.getFullYear()));
+  const [equipe,    setEquipe]    = useState(isEdit ? (item.equipe   ?? '') : '');
+  const [produto,   setProduto]   = useState(isEdit ? (item.produto  ?? '') : '');
+  const [atividade, setAtividade] = useState(isEdit ? (item.atividade ?? '') : '');
+  const [horas,     setHoras]     = useState(isEdit && item.effort != null ? String(item.effort) : '');
+  const [state,     setState]     = useState(isEdit ? (item.state ?? '') : '');
+
+  const [status,     setStatus]     = useState('idle');
+  const [errorMsg,   setErrorMsg]   = useState('');
+  const [resultId,   setResultId]   = useState(null);
+  const [resultUrl,  setResultUrl]  = useState(null);
+
+  const analistas = dataOptions.analistas ?? [];
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape' && status !== 'loading') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose, status]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!titulo.trim()) return;
+
+    setStatus('loading');
+    setErrorMsg('');
+
+    let payload;
+    if (isEdit) {
+      // Envia apenas os campos que foram alterados em relação ao item original
+      payload = { titulo };
+
+      const mesOriginal = MESES.find(m => m.value.startsWith(item.mes + ' '))?.value ?? '';
+      if (analista  !== (item.assignedTo  ?? ''))                        payload.analista  = analista;
+      if (mes       !== mesOriginal)                                      payload.mes       = mes;
+      if (ano       !== (item.ano         ?? String(hoje.getFullYear()))) payload.ano       = ano;
+      if (equipe    !== (item.equipe      ?? ''))                        payload.equipe    = equipe;
+      if (produto   !== (item.produto     ?? ''))                        payload.produto   = produto;
+      if (atividade !== (item.atividade   ?? ''))                        payload.atividade = atividade;
+      if (state     !== (item.state       ?? ''))                        payload.state     = state;
+      const horasNum      = horas !== '' ? Number(horas) : null;
+      const horasOriginal = item.effort ?? null;
+      if (horasNum !== horasOriginal)                                     payload.horas     = horasNum;
+    } else {
+      payload = { titulo, analista, mes, ano, equipe, produto, atividade, horas: horas !== '' ? Number(horas) : undefined, ...(state ? { state } : {}) };
+    }
+
+    try {
+      const url    = isEdit ? `/api/workitems/timesheet/${item.id.replace(/\D/g, '')}` : '/api/workitems/timesheet';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Servidor indisponível ou rota não encontrada (HTTP ${res.status}). Reinicie o backend.`);
+      }
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+      setResultId(data.id);
+      setResultUrl(data.url);
+      setStatus('success');
+    } catch (err) {
+      setErrorMsg(err.message);
+      setStatus('error');
+    }
+  }
+
+  function handleNovaEntrada() {
+    setTitulo(''); setAnalista(''); setEquipe(''); setProduto(''); setAtividade(''); setHoras('');
+    setStatus('idle'); setErrorMsg(''); setResultId(null); setResultUrl(null);
+  }
+
+  const canSubmit = titulo.trim().length > 0 && status !== 'loading';
+
+  return (
+    <div className="tsmodal-overlay" onClick={(e) => { if (e.target === e.currentTarget && status !== 'loading') onClose(); }}>
+      <div className="tsmodal-panel">
+
+        {/* Header */}
+        <div className="tsmodal-header">
+          <div className="tsmodal-header-title">
+            <h2 className="tsmodal-title">{isEdit ? 'Editar Timesheet' : 'Criar Timesheet'}</h2>
+            <div className="tsmodal-title-bar" />
+          </div>
+          <button className="tsmodal-close-btn" onClick={onClose} disabled={status === 'loading'} aria-label="Fechar">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Sucesso */}
+        {status === 'success' ? (
+          <div className="tsmodal-success">
+            <CheckCircle size={40} className="tsmodal-success-icon" />
+            <p className="tsmodal-success-title">{isEdit ? 'Timesheet atualizado!' : 'Timesheet criado!'}</p>
+            <p className="tsmodal-success-id">{item?.id ?? `TS-${resultId}`}</p>
+            <div className="tsmodal-success-actions">
+              {resultUrl && (
+                <a href={resultUrl} target="_blank" rel="noreferrer" className="tsmodal-btn tsmodal-btn--accent">
+                  Abrir no Azure DevOps
+                </a>
+              )}
+              {!isEdit && (
+                <button className="tsmodal-btn tsmodal-btn--ghost" onClick={handleNovaEntrada}>
+                  Criar outro
+                </button>
+              )}
+              <button className="tsmodal-btn tsmodal-btn--ghost" onClick={onClose}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form className="tsmodal-form" onSubmit={handleSubmit} noValidate>
+            <div className="tsmodal-form-body">
+
+              {/* Título */}
+              <div className="tsmodal-field tsmodal-field--full">
+                <label className="tsmodal-label">Título <span className="tsmodal-required">*</span></label>
+                <input
+                  className="tsmodal-input"
+                  type="text"
+                  placeholder="Ex: Desenvolvimento da feature X"
+                  value={titulo}
+                  onChange={e => setTitulo(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="tsmodal-row">
+                {/* Analista */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Analista</label>
+                  {analistas.length > 0 ? (
+                    <select className="tsmodal-select" value={analista} onChange={e => setAnalista(e.target.value)}>
+                      <option value="">Selecionar...</option>
+                      {analistas.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  ) : (
+                    <input className="tsmodal-input" type="text" placeholder="Nome do analista"
+                      value={analista} onChange={e => setAnalista(e.target.value)} />
+                  )}
+                </div>
+
+                {/* Equipe */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Equipe</label>
+                  <input className="tsmodal-input" type="text" placeholder="Ex: E&D"
+                    value={equipe} onChange={e => setEquipe(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="tsmodal-row">
+                {/* Mês */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Mês</label>
+                  <select className="tsmodal-select" value={mes} onChange={e => setMes(e.target.value)}>
+                    {MESES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+
+                {/* Ano */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Ano</label>
+                  <select className="tsmodal-select" value={ano} onChange={e => setAno(e.target.value)}>
+                    {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+
+                {/* Horas */}
+                <div className="tsmodal-field tsmodal-field--sm">
+                  <label className="tsmodal-label">Horas</label>
+                  <input className="tsmodal-input" type="number" min="0.5" step="0.5" placeholder="0"
+                    value={horas} onChange={e => setHoras(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="tsmodal-row">
+                {/* Produto */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Produto</label>
+                  {dataOptions.produtos.length > 0 ? (
+                    <select className="tsmodal-select" value={produto} onChange={e => setProduto(e.target.value)}>
+                      <option value="">Selecionar...</option>
+                      {dataOptions.produtos.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  ) : (
+                    <input className="tsmodal-input" type="text" placeholder="Nome do produto"
+                      value={produto} onChange={e => setProduto(e.target.value)} />
+                  )}
+                </div>
+
+                {/* Atividade */}
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Atividade</label>
+                  {dataOptions.atividades.length > 0 ? (
+                    <select className="tsmodal-select" value={atividade} onChange={e => setAtividade(e.target.value)}>
+                      <option value="">Selecionar...</option>
+                      {dataOptions.atividades.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  ) : (
+                    <input className="tsmodal-input" type="text" placeholder="Tipo de atividade"
+                      value={atividade} onChange={e => setAtividade(e.target.value)} />
+                  )}
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="tsmodal-row">
+                <div className="tsmodal-field">
+                  <label className="tsmodal-label">Status</label>
+                  <select className="tsmodal-select" value={state} onChange={e => setState(e.target.value)}>
+                    <option value="">Selecionar...</option>
+                    {dataOptions.states.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Erro */}
+              {status === 'error' && (
+                <div className="tsmodal-error">
+                  <AlertCircle size={14} />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="tsmodal-footer">
+              <button type="button" className="tsmodal-btn tsmodal-btn--ghost" onClick={onClose} disabled={status === 'loading'}>
+                Cancelar
+              </button>
+              <button type="submit" className={`tsmodal-btn tsmodal-btn--accent${!canSubmit ? ' tsmodal-btn--disabled' : ''}`} disabled={!canSubmit}>
+                {status === 'loading'
+                  ? <><Loader size={13} className="tsmodal-spin" /> {isEdit ? 'Salvando...' : 'Criando...'}</>
+                  : isEdit ? 'Salvar Alterações' : 'Criar Timesheet'}
+              </button>
+            </div>
+          </form>
+        )}
+
+      </div>
+    </div>
+  );
+}
 
 const SORTABLE_COLS = [
   { key: 'produto',    label: 'Produto'   },
@@ -54,9 +383,11 @@ function PageWindow({ safePage, totalPages, onPageChange }) {
   );
 }
 
-export default function TimesheetTable({ data }) {
-  const [page, setPage]         = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+export default function TimesheetTable({ data, rawData }) {
+  const [page, setPage]           = useState(1);
+  const [pageSize, setPageSize]   = useState(10);
+  // null = fechado | { mode:'create' } | { mode:'edit', item }
+  const [modalState, setModalState] = useState(null);
   const { sortedData, sortConfig, requestSort } = useSort(data);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
@@ -70,20 +401,38 @@ export default function TimesheetTable({ data }) {
   const from = sortedData.length === 0 ? 0 : start + 1;
   const to   = Math.min(start + pageSize, sortedData.length);
 
+  // Opções únicas para os dropdowns do modal (derivadas dos dados existentes)
+  const dataOptions = useMemo(() => {
+    // Usa rawData (dados completos, sem filtro) para garantir que todas as opções apareçam
+    const source     = rawData ?? data;
+    const produtos   = [...new Set(source.map(d => d.produto).filter(Boolean))].sort();
+    const atividades = [...new Set(source.map(d => d.atividade).filter(Boolean))].sort();
+    const analistas  = [...new Set(source.map(d => d.assignedTo).filter(Boolean))].sort();
+    const states     = [...new Set(source.map(d => d.state).filter(Boolean))].sort();
+    return { produtos, atividades, analistas, states };
+  }, [data, rawData]);
+
   return (
+    <>
+    {modalState && (
+      <TimesheetModal
+        onClose={() => setModalState(null)}
+        dataOptions={dataOptions}
+        mode={modalState.mode}
+        item={modalState.item ?? null}
+      />
+    )}
     <div className="uc-table-wrap">
       <div className="uc-table-header">
         <h3 className="uc-table-title">Lista de Timesheets</h3>
         <div className="uc-table-header-right">
-          <a
-            href="https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/create/Timesheet"
-            target="_blank"
-            rel="noreferrer"
+          <button
             className="criar-timesheet-btn"
+            onClick={() => setModalState({ mode: 'create' })}
           >
             <Plus size={13} />
             Criar Timesheet
-          </a>
+          </button>
           <span className="uc-table-count">{sortedData.length} item{sortedData.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
@@ -108,12 +457,13 @@ export default function TimesheetTable({ data }) {
                   </span>
                 </th>
               ))}
+              <th scope="col" className="col-acoes">Ações</th>
             </tr>
           </thead>
           <tbody>
             {pageItems.length === 0 ? (
               <tr>
-                <td colSpan={TOTAL_COLS} className="uc-table-empty">
+                <td colSpan={TOTAL_COLS + 1} className="uc-table-empty">
                   Nenhum Timesheet encontrado com os filtros aplicados.
                 </td>
               </tr>
@@ -141,6 +491,9 @@ export default function TimesheetTable({ data }) {
                       <span className={`state-badge state-badge--${item.state.toLowerCase().replace(/\s+/g, '-')}`}>
                         {item.state}
                       </span>
+                    </td>
+                    <td className="cell-acoes">
+                      <GearMenu onEditar={() => setModalState({ mode: 'edit', item })} />
                     </td>
                   </tr>
                 );
@@ -187,5 +540,6 @@ export default function TimesheetTable({ data }) {
         </div>
       </div>
     </div>
+    </>
   );
 }

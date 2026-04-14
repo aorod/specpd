@@ -3,11 +3,12 @@ import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
-import dayoffsRouter  from './routes/dayoffs.js';
-import feriasRouter   from './routes/ferias.js';
-import calendarRouter from './routes/calendar.js';
-import authRouter     from './routes/auth.js';
-import usersRouter    from './routes/users.js';
+import dayoffsRouter    from './routes/dayoffs.js';
+import feriasRouter     from './routes/ferias.js';
+import calendarRouter   from './routes/calendar.js';
+import authRouter       from './routes/auth.js';
+import usersRouter      from './routes/users.js';
+import workitemsRouter  from './routes/workitems.js';
 import {
   isCacheValid,
   getCachedItems,
@@ -28,11 +29,12 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
-app.use('/api/auth',    authRouter);
-app.use('/api/users',   usersRouter);
-app.use('/api/dayoffs',  dayoffsRouter);
-app.use('/api/ferias',   feriasRouter);
-app.use('/api/calendar', calendarRouter);
+app.use('/api/auth',       authRouter);
+app.use('/api/users',      usersRouter);
+app.use('/api/dayoffs',    dayoffsRouter);
+app.use('/api/ferias',     feriasRouter);
+app.use('/api/calendar',   calendarRouter);
+app.use('/api/workitems',  workitemsRouter);
 
 const ORG = 'vector-brasil';
 const PROJECT = 'Roadmap%202025';

@@ -419,7 +419,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
       case 'atividade':
         return <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />;
       case 'tabela':
-        return <TimesheetTable data={displayData} />;
+        return <TimesheetTable data={displayData} rawData={rawData} />;
       default:
         return null;
     }
