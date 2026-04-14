@@ -73,10 +73,11 @@ import './DayOffPage.css';
 const TIPOS_ABONO = ['Atestado', 'Day Off'];
 
 export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const canCriar  = can('dayoff', 'criar');
   const canEditar  = can('dayoff', 'editar');
   const canExcluir = can('dayoff', 'excluir');
+  const isAdmin = user?.papel === 'admin';
 
   // Form state
   const [analista, setAnalista]     = useState('');
@@ -99,6 +100,32 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
     [analistas],
   );
 
+  // Auto-preenchimento do campo Analista com base no usuário logado
+  const matchedAnalista = useMemo(() => {
+    if (!user || isAdmin || !user.nome) return null;
+    const userLower = user.nome.toLowerCase().trim();
+    // Correspondência exata
+    const exact = analistasAtivos.find(a => a.nome.toLowerCase().trim() === userLower);
+    if (exact) return exact.nome;
+    // Correspondência próxima: nome do analista é prefixo do nome do usuário (usuário tem sobrenome extra)
+    const prefix = analistasAtivos.find(a => userLower.startsWith(a.nome.toLowerCase().trim() + ' '));
+    if (prefix) return prefix.nome;
+    return null;
+  }, [user, isAdmin, analistasAtivos]);
+
+  useEffect(() => {
+    if (matchedAnalista) setAnalista(matchedAnalista);
+  }, [matchedAnalista]);
+
+  const analistaLocked = !isAdmin && !!matchedAnalista;
+
+  // Controle de edição/exclusão por registro
+  function canActOnRecord(r, basePermission) {
+    const isOwnRecord = matchedAnalista && r.analista === matchedAnalista;
+    if (isOwnRecord) return basePermission;
+    return user?.papel !== 'analista';
+  }
+
   // Equipe vem do Registro de Analistas (fallback: EQUIPE_MAP)
   const alias  = analista;
   const equipe = alias ? (analistasAtivos.find(a => a.nome === alias)?.equipe || EQUIPE_MAP[alias] || '—') : '';
@@ -106,7 +133,7 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
   async function handleIncluir() {
     if (!analista || !dataInicio || !dataFim || !tipoAbono) return;
     await incluir({ analista: alias, equipe, dataInicio, dataFim, tipoAbono });
-    setAnalista('');
+    if (!analistaLocked) setAnalista('');
     setDataInicio('');
     setDataFim('');
     setTipoAbono('');
@@ -209,7 +236,12 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
 
           <div className="dayoff-field">
             <label className="dayoff-label">Analista</label>
-            <select className="dayoff-select" value={analista} onChange={(e) => setAnalista(e.target.value)}>
+            <select
+              className="dayoff-select"
+              value={analista}
+              onChange={(e) => setAnalista(e.target.value)}
+              disabled={analistaLocked}
+            >
               <option value="">Selecionar...</option>
               {analistasAtivos.map((a) => (
                 <option key={a.id ?? a.nome} value={a.nome}>{a.nome}</option>
@@ -388,9 +420,9 @@ export default function DayOffPage({ theme, setTheme, menuOpen, onMenuToggle, on
                       </td>
                       <td>
                         <GearMenu
-                        onEditar={canEditar  ? () => handleEditar(r)      : null}
-                        onRemover={canExcluir ? () => handleRemover(r.id) : null}
-                      />
+                          onEditar={canActOnRecord(r, canEditar)   ? () => handleEditar(r)      : null}
+                          onRemover={canActOnRecord(r, canExcluir) ? () => handleRemover(r.id)  : null}
+                        />
                       </td>
                     </tr>
                   );

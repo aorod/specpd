@@ -841,11 +841,12 @@ function SolicitarFeriasModal({ analistaAlias, saldo, registros, onSolicitar, on
 
 // ── FeriasPage ─────────────────────────────────────────────────────────────────
 export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const canCriar   = can('ferias', 'criar');
   const canEditar  = can('ferias', 'editar');
   const canAprovar = can('ferias', 'aprovar');
   const canCancelar = can('ferias', 'cancelar');
+  const isAdmin = user?.papel === 'admin';
 
   const [analistaSelecionado, setAnalistaSelecionado] = useState('');
   const [modalOpen,     setModalOpen]     = useState(false);
@@ -862,6 +863,32 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
     () => analistas.filter(a => a.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)),
     [analistas],
   );
+
+  // Auto-preenchimento do campo Analista com base no usuário logado
+  const matchedAnalista = useMemo(() => {
+    if (!user || isAdmin || !user.nome) return null;
+    const userLower = user.nome.toLowerCase().trim();
+    // Correspondência exata
+    const exact = analistasAtivos.find(a => a.nome.toLowerCase().trim() === userLower);
+    if (exact) return exact.nome;
+    // Correspondência próxima: nome do analista é prefixo do nome do usuário (usuário tem sobrenome extra)
+    const prefix = analistasAtivos.find(a => userLower.startsWith(a.nome.toLowerCase().trim() + ' '));
+    if (prefix) return prefix.nome;
+    return null;
+  }, [user, isAdmin, analistasAtivos]);
+
+  useEffect(() => {
+    if (matchedAnalista) setAnalistaSelecionado(matchedAnalista);
+  }, [matchedAnalista]);
+
+  const analistaLocked = !isAdmin && !!matchedAnalista;
+
+  // Controle de edição/exclusão por registro
+  function canActOnRecord(r, basePermission) {
+    const isOwnRecord = matchedAnalista && r.analista === matchedAnalista;
+    if (isOwnRecord) return basePermission;
+    return user?.papel !== 'analista';
+  }
 
   const alias = analistaSelecionado;
 
@@ -963,6 +990,7 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
               className="dayoff-select"
               value={analistaSelecionado}
               onChange={e => setAnalistaSelecionado(e.target.value)}
+              disabled={analistaLocked}
             >
               <option value="">Selecionar...</option>
               {analistasAtivos.map(a => (
@@ -1052,8 +1080,8 @@ export default function FeriasPage({ theme, setTheme, menuOpen, onMenuToggle, on
                     <td className="dayoff-td--muted">{r.observacao || '—'}</td>
                     <td>
                       <GearMenu
-                        onEditar={canEditar   ? () => handleEditar(r)      : null}
-                        onRemover={canCancelar ? () => handleRemover(r.id) : null}
+                        onEditar={canActOnRecord(r, canEditar)    ? () => handleEditar(r)      : null}
+                        onRemover={canActOnRecord(r, canCancelar) ? () => handleRemover(r.id)  : null}
                       />
                     </td>
                   </tr>

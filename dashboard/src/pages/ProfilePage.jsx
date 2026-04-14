@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, UserCircle2, ShieldCheck, UserCog, Users, Eye, KeyRound, Check, X, Camera } from 'lucide-react';
+import { Sun, Moon, UserCircle2, ShieldCheck, UserCog, Users, Eye, KeyRound, Check, X, Camera, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import { updateUser } from '../api/authClient.js';
@@ -37,42 +37,73 @@ export default function ProfilePage({ theme, setTheme, menuOpen, onMenuToggle, o
   const { user, avatarUrl, updateAvatar } = useAuth();
   const fileInputRef = useRef(null);
 
+  // undefined = sem alteração pendente | null = remover | string = nova foto
+  const [pendingAvatar, setPendingAvatar] = useState(undefined);
+
   const [senhaAtual,   setSenhaAtual]   = useState('');
   const [novaSenha,    setNovaSenha]    = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
-  const [saving,       setSaving]       = useState(false);
   const [feedback,     setFeedback]     = useState(null); // { type: 'ok'|'err', msg }
+  const [saving,       setSaving]       = useState(false);
+  const [confirmOpen,  setConfirmOpen]  = useState(false);
+  const [toastMsg,     setToastMsg]     = useState('');
+
+  // Avatar exibido = pendente (se houver) ou o salvo no contexto
+  const displayAvatar     = pendingAvatar !== undefined ? pendingAvatar : avatarUrl;
+  const hasAvatarChange   = pendingAvatar !== undefined;
+  const hasPasswordChange = !!(senhaAtual || novaSenha || confirmSenha);
+  const isDirty = hasAvatarChange || hasPasswordChange;
+
+  const papel    = PAPEL_CONFIG[user?.papel] || { label: user?.papel, cls: '', icon: UserCircle2 };
+  const PapelIcon = papel.icon;
+
+  function showToast(msg) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 3000);
+  }
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) return;
     const base64 = await cropToSquare(file);
-    updateAvatar(base64);
+    setPendingAvatar(base64);
     e.target.value = '';
   }
 
-  const papel = PAPEL_CONFIG[user?.papel] || { label: user?.papel, cls: '', icon: UserCircle2 };
-  const PapelIcon = papel.icon;
+  function handleSalvarClick() {
+    if (!isDirty) {
+      showToast('Nenhuma alteração foi feita para salvar');
+      return;
+    }
+    if (hasPasswordChange) {
+      setFeedback(null);
+      if (!senhaAtual) { setFeedback({ type: 'err', msg: 'Informe sua senha atual.' }); return; }
+      if (!novaSenha)  { setFeedback({ type: 'err', msg: 'Informe a nova senha.' }); return; }
+      if (novaSenha !== confirmSenha) { setFeedback({ type: 'err', msg: 'As senhas não coincidem.' }); return; }
+      if (novaSenha.length < 6)       { setFeedback({ type: 'err', msg: 'A senha deve ter ao menos 6 caracteres.' }); return; }
+    }
+    setConfirmOpen(true);
+  }
 
-  async function handleSenha(e) {
-    e.preventDefault();
-    setFeedback(null);
-
-    if (!senhaAtual) { setFeedback({ type: 'err', msg: 'Informe sua senha atual.' }); return; }
-    if (!novaSenha)  { setFeedback({ type: 'err', msg: 'Informe a nova senha.' }); return; }
-    if (novaSenha !== confirmSenha) { setFeedback({ type: 'err', msg: 'As senhas não coincidem.' }); return; }
-    if (novaSenha.length < 6)       { setFeedback({ type: 'err', msg: 'A senha deve ter ao menos 6 caracteres.' }); return; }
-
+  async function handleConfirmedSave() {
     setSaving(true);
+    setConfirmOpen(false);
     try {
-      await updateUser(user.id, { senhaAtual, senha: novaSenha });
-      setFeedback({ type: 'ok', msg: 'Senha alterada com sucesso.' });
+      if (hasPasswordChange) {
+        await updateUser(user.id, { senhaAtual, senha: novaSenha });
+      }
+      if (hasAvatarChange) {
+        updateAvatar(pendingAvatar); // null (remover) ou base64
+      }
       setSenhaAtual('');
       setNovaSenha('');
       setConfirmSenha('');
+      setPendingAvatar(undefined);
+      setFeedback(null);
+      showToast('Alterações salvas com sucesso!');
     } catch (err) {
-      setFeedback({ type: 'err', msg: err.message || 'Erro ao alterar senha.' });
+      setFeedback({ type: 'err', msg: err.message || 'Erro ao salvar alterações.' });
     } finally {
       setSaving(false);
     }
@@ -95,7 +126,6 @@ export default function ProfilePage({ theme, setTheme, menuOpen, onMenuToggle, o
         </button>
 
         <header className="profile-page-header">
-
           <div>
             <h1 className="profile-page-title">Perfil</h1>
             <p className="profile-page-subtitle">Informações da sua conta</p>
@@ -119,20 +149,33 @@ export default function ProfilePage({ theme, setTheme, menuOpen, onMenuToggle, o
 
         {/* Card: Informações da conta */}
         <div className="profile-info-card">
-          <button
-            className="profile-avatar-wrap"
-            onClick={() => fileInputRef.current?.click()}
-            title="Alterar foto de perfil"
-            aria-label="Alterar foto de perfil"
-          >
-            {avatarUrl
-              ? <img className="profile-avatar-img" src={avatarUrl} alt="Avatar" />
-              : <UserCircle2 size={52} strokeWidth={1.3} className="profile-avatar-icon" />
-            }
-            <span className="profile-avatar-overlay">
-              <Camera size={18} />
-            </span>
-          </button>
+          <div className="profile-avatar-col">
+            <button
+              className="profile-avatar-wrap"
+              onClick={() => fileInputRef.current?.click()}
+              title="Alterar foto de perfil"
+              aria-label="Alterar foto de perfil"
+            >
+              {displayAvatar
+                ? <img className="profile-avatar-img" src={displayAvatar} alt="Avatar" />
+                : <UserCircle2 size={52} strokeWidth={1.3} className="profile-avatar-icon" />
+              }
+              <span className="profile-avatar-overlay">
+                <Camera size={18} />
+              </span>
+            </button>
+            {displayAvatar && (
+              <button
+                className="profile-avatar-remove"
+                onClick={() => setPendingAvatar(null)}
+                title="Remover foto de perfil"
+                aria-label="Remover foto de perfil"
+              >
+                <Trash2 size={11} />
+                Remover foto
+              </button>
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -157,7 +200,7 @@ export default function ProfilePage({ theme, setTheme, menuOpen, onMenuToggle, o
             Alterar Senha
           </h2>
 
-          <form className="profile-senha-form" onSubmit={handleSenha}>
+          <div className="profile-senha-form">
             <div className="profile-field">
               <label className="profile-label">Senha atual</label>
               <input
@@ -198,14 +241,66 @@ export default function ProfilePage({ theme, setTheme, menuOpen, onMenuToggle, o
                 {feedback.msg}
               </div>
             )}
-
-            <button type="submit" className="profile-save-btn" disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar nova senha'}
-            </button>
-          </form>
+          </div>
         </div>
 
       </div>
+
+      {/* ── Barra fixa inferior ─────────────────────────────────── */}
+      <div className="profile-sticky-bottom">
+        <button
+          className="profile-bottom-btn profile-bottom-btn--back"
+          onClick={() => onNavigate('home')}
+        >
+          Voltar
+        </button>
+        <button
+          className="profile-bottom-btn profile-bottom-btn--save"
+          onClick={handleSalvarClick}
+          disabled={saving}
+        >
+          {saving ? 'Salvando…' : 'Salvar'}
+        </button>
+      </div>
+
+      {/* ── Toast ──────────────────────────────────────────────── */}
+      {toastMsg && <div className="profile-toast">{toastMsg}</div>}
+
+      {/* ── Modal de confirmação ────────────────────────────────── */}
+      {confirmOpen && (
+        <div
+          className="profile-modal-overlay"
+          onClick={e => { if (e.target === e.currentTarget) setConfirmOpen(false); }}
+        >
+          <div className="profile-modal-card">
+            <div className="profile-modal-header">
+              <h2 className="profile-modal-title">Confirmar alterações</h2>
+              <button className="profile-modal-close" onClick={() => setConfirmOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <p className="profile-modal-text">
+              Deseja salvar as alterações do seu perfil?<br />
+              As alterações entrarão em vigor imediatamente.
+            </p>
+            <div className="profile-modal-actions">
+              <button
+                className="profile-modal-btn profile-modal-btn--cancel"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="profile-modal-btn profile-modal-btn--save"
+                onClick={handleConfirmedSave}
+              >
+                <Check size={14} />
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

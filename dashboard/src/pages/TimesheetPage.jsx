@@ -45,14 +45,15 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
 
   const metrics = useTimesheetMetrics(displayData);
 
-  // Dataset para o gráfico de analistas: aplica todos os filtros EXCETO responsaveis,
-  // para que todas as barras permaneçam visíveis ao clicar em um analista.
+  // Dataset para o gráfico de analistas: quando a seleção veio de um clique na barra
+  // (selectedAnalista preenchido), ignora o filtro de responsaveis para que todas as
+  // barras permaneçam visíveis. Quando a seleção veio do filtro, respeita normalmente.
   const filteredDataForChart = useMemo(() => {
-    if (!search.trim() && filters.responsaveis.length === 0) return filteredData;
+    if (!selectedAnalista) return filteredData;
     return rawData.filter((item) => {
-      if (filters.anos.length > 0       && !filters.anos.includes(item.ano))        return false;
-      if (filters.meses.length > 0      && !filters.meses.includes(item.mes))       return false;
-      if (filters.states.length > 0     && !filters.states.includes(item.state))    return false;
+      if (filters.anos.length > 0       && !filters.anos.includes(item.ano))         return false;
+      if (filters.meses.length > 0      && !filters.meses.includes(item.mes))        return false;
+      if (filters.states.length > 0     && !filters.states.includes(item.state))     return false;
       if (filters.produtos.length > 0   && !filters.produtos.includes(item.produto)) return false;
       if (filters.equipes.length > 0) {
         const val = item.equipe || 'Sem Equipe';
@@ -62,9 +63,12 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
         const val = item.atividade || 'Sem Atividade';
         if (!filters.atividades.includes(val)) return false;
       }
+      if (search.trim()) {
+        if (!item.title?.toLowerCase().includes(search.toLowerCase())) return false;
+      }
       return true;
     });
-  }, [rawData, filteredData, search, filters.responsaveis, filters.anos, filters.meses, filters.states, filters.produtos, filters.equipes, filters.atividades]);
+  }, [selectedAnalista, rawData, filteredData, search, filters.anos, filters.meses, filters.states, filters.produtos, filters.equipes, filters.atividades]);
 
   const metricsForChart = useTimesheetMetrics(filteredDataForChart);
   const { horasPorDia, diasUteis, totalHorasMes, diasUteisAteHoje, nationalByAno, pontoFacDates, anosEfetivos, mesesEfetivos } = useWorkdaysCalc(filters);
@@ -408,6 +412,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
             tooltipData={tooltipAnalistaData}
             ausentesHoje={analistasAusentesNoPeriodo}
             onSelectKey={handleSelectAnalista}
+            selectedKey={selectedAnalista}
             perColumnLines={[
               { values: metaAnalistaLines.metaMesMap, color: '#3b82f6', label: 'Meta do Mês' },
               ...(diasUteisAteHoje > 0 ? [{ values: metaAnalistaLines.metaDiaMap, color: '#22c55e', label: 'Meta do Dia', showLabels: false }] : []),
@@ -537,7 +542,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
                 filters={filters}
                 toggleFilter={toggleFilter}
                 setSingleFilter={setSingleFilter}
-                clearFilters={clearFilters}
+                clearFilters={() => { clearFilters(); setSelectedAnalista(null); }}
                 isActive={isActive}
                 search={search}
                 onSearchChange={setSearch}

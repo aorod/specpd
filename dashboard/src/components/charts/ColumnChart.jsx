@@ -175,13 +175,18 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
               return { cx: colCenters[i], refY, value, key };
             });
 
-            const polylinePoints = points.map((p) => `${p.cx},${p.refY}`).join(' ');
+            const smoothD = points.reduce((d, p, i) => {
+              if (i === 0) return `M ${p.cx},${p.refY}`;
+              const prev = points[i - 1];
+              const dx = (p.cx - prev.cx) * 0.4;
+              return `${d} C ${prev.cx + dx},${prev.refY} ${p.cx - dx},${p.refY} ${p.cx},${p.refY}`;
+            }, '');
 
             return (
               <g key={line.label}>
                 {/* Dashed connecting line */}
-                <polyline
-                  points={polylinePoints}
+                <path
+                  d={smoothD}
                   fill="none"
                   stroke={line.color}
                   strokeWidth={1.5}

@@ -33,10 +33,14 @@ export function AuthProvider({ children }) {
     }
   }, [user?.id]);
 
-  function updateAvatar(base64) {
+  function updateAvatar(base64OrNull) {
     if (user?.id) {
-      localStorage.setItem(`specpd_avatar_${user.id}`, base64);
-      setAvatarUrl(base64);
+      if (base64OrNull === null) {
+        localStorage.removeItem(`specpd_avatar_${user.id}`);
+      } else {
+        localStorage.setItem(`specpd_avatar_${user.id}`, base64OrNull);
+      }
+      setAvatarUrl(base64OrNull);
     }
   }
 
