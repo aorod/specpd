@@ -1,0 +1,38 @@
+import { useState, useEffect, useCallback } from 'react';
+
+export function useEsteiraEDData() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const retry = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await fetch('/api/esteira-ed/sync', { method: 'POST' });
+    } catch {
+      // se o sync falhar, ainda tenta buscar o cache
+    }
+    setRetryCount(n => n + 1);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetch('/api/esteira-ed', { signal: controller.signal, cache: 'no-store' })
+      .then(res => {
+        if (!res.ok) return res.json().then(b => Promise.reject(new Error(b.error ?? `HTTP ${res.status}`)));
+        return res.json();
+      })
+      .then(setData)
+      .catch(err => { if (err.name !== 'AbortError') setError(err); })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [retryCount]);
+
+  return { data, loading, error, retry };
+}

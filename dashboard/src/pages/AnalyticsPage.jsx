@@ -1,69 +1,57 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   RefreshCw, AlertCircle, RotateCcw, Sun, Moon,
-  Layers, FileCheck, AlertTriangle, FileMinus,
-  UserCheck, Pin, PinOff,
-  Lightbulb, ShieldAlert, CalendarClock,
-  Activity, Clock3, BellRing, Repeat2, Radar,
+  Layers, Pin, PinOff, SlidersHorizontal, History, ChevronLeft, ChevronRight,
+  ShieldAlert, ChevronsUpDown, ChevronUp, ChevronDown,
 } from 'lucide-react';
-import { useUCData } from '../hooks/useUCData.js';
-import { useAnalyticsMetrics } from '../hooks/useAnalyticsMetrics.js';
+import { useUCData }              from '../hooks/useUCData.js';
+import { useSort }   from '../hooks/useSort.js';
 import { aliasName } from '../utils/nameAliases.js';
-import MetricCard from '../components/cards/MetricCard.jsx';
-import FluxoBarChart from '../components/analytics/FluxoBarChart.jsx';
-import LineChart from '../components/charts/LineChart.jsx';
-import ProfileMenu from '../components/profile/ProfileMenu.jsx';
+import MetricCard                 from '../components/cards/MetricCard.jsx';
+import ProfileMenu                from '../components/profile/ProfileMenu.jsx';
+import HistoricoModal             from '../components/analytics/HistoricoModal.jsx';
+import AnalyticsFilterBar         from '../components/filters/AnalyticsFilterBar.jsx';
+import '../components/table/UCTable.css';
 import './AnalyticsPage.css';
 
-const MES_ABBR = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const PAGE_SIZES    = [10, 25, 50, 100];
+const MAX_PAGE_BTNS = 10;
+const ADO_BASE      = 'https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/edit/';
 
-const RECOMENDACOES = [
-  { priority: 'alta',  label: 'Alta',  acao: 'Criar checklist de validação pré-entrega',             produto: 'Nova Web, App Vector',   impacto: 'Redução de 30–40% em Eng. Reversa' },
-  { priority: 'alta',  label: 'Alta',  acao: 'Revisar critérios de aceite em Q1 (Jan–Mar)',          produto: 'Todos',                  impacto: 'Prevenção do pico sazonal' },
-  { priority: 'media', label: 'Média', acao: 'Implementar alerta automático ao atingir 2% mensal',   produto: 'Todos',                  impacto: 'Detecção precoce' },
-  { priority: 'media', label: 'Média', acao: 'Mapear causas-raiz das 9 ocorrências atuais',          produto: 'Cargo Match, Nova Web',  impacto: 'Base para ação corretiva' },
-  { priority: 'baixa', label: 'Baixa', acao: 'Criar dashboard de acompanhamento semanal',            produto: 'GR Vector, Vector Pay',  impacto: 'Visibilidade contínua' },
+const SORTABLE_COLS = [
+  { key: 'state',      label: 'Estado'      },
+  { key: 'produto',    label: 'Produto'     },
+  { key: 'assignedTo', label: 'Responsável' },
 ];
+
+function SortIcon({ col, sortConfig }) {
+  if (sortConfig.key !== col) return <ChevronsUpDown size={13} className="sort-icon" />;
+  return sortConfig.direction === 'asc'
+    ? <ChevronUp   size={13} className="sort-icon sort-icon--active" />
+    : <ChevronDown size={13} className="sort-icon sort-icon--active" />;
+}
+
+function PageWindow({ safePage, totalPages, onPageChange }) {
+  const half = Math.floor(MAX_PAGE_BTNS / 2);
+  let winStart = Math.max(1, safePage - half);
+  let winEnd   = Math.min(totalPages, winStart + MAX_PAGE_BTNS - 1);
+  if (winEnd - winStart + 1 < MAX_PAGE_BTNS) winStart = Math.max(1, winEnd - MAX_PAGE_BTNS + 1);
+  return Array.from({ length: winEnd - winStart + 1 }, (_, i) => winStart + i).map(p => (
+    <button
+      key={p}
+      className={`pagination-btn pagination-page-btn${p === safePage ? ' pagination-page-btn--active' : ''}`}
+      onClick={() => onPageChange(p)}
+    >{p}</button>
+  ));
+}
 
 export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useUCData();
-  const metrics = useAnalyticsMetrics(rawData);
-  const [chartsCollapsed] = useState(false);
+  // ─── Pinned cards ───────────────────────────────────────────────────────────
   const [pinnedCards, setPinnedCards] = useState([]);
-
   const togglePin = (id) =>
-    setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
+    setPinnedCards(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
 
-  // ─── Derivações estratégicas ───────────────────────────────────────────────
-  const produtoMaiorRisco = metrics.porProduto.size
-    ? ([...metrics.porProduto.entries()].sort(([, a], [, b]) => b.fluxoER - a.fluxoER)[0]?.[0] ?? 'N/D')
-    : 'N/D';
-
-  const mesCritico = (() => {
-    if (!metrics.porMes.size) return 'N/D';
-    const sorted = [...metrics.porMes.entries()].sort(([, a], [, b]) => b.fluxoER - a.fluxoER);
-    const key = sorted[0]?.[0] ?? '';
-    const [, m] = key.split('-');
-    return MES_ABBR[parseInt(m, 10) - 1] ?? key;
-  })();
-
-  const produtosEmAlerta = [...metrics.porProduto.values()]
-    .filter(v => v.total > 0 && (v.fluxoER / v.total) > 0.03).length;
-
-  // ─── Definição unificada dos cards ────────────────────────────────────────
-  const allCardDefs = [
-    { id: 'total',  type: 'metric', icon: Layers,        label: 'Total de Casos de Uso', value: metrics.totalUCs,     detail: null,                              accent: 'neutral' },
-    { id: 'normal', type: 'metric', icon: FileCheck,     label: 'Fluxo Normal',          value: metrics.fluxoNormal,  detail: `${metrics.pctNormal}% do total`,  accent: 'success' },
-    { id: 'er',     type: 'metric', icon: AlertTriangle, label: 'Engenharia Reversa',    value: metrics.fluxoER,      detail: `${metrics.pctER}% do total`,      accent: 'er'      },
-    { id: 'semReq', type: 'metric', icon: FileMinus,     label: 'Sem Documentação',      value: metrics.semRequisito, detail: null,                              accent: 'warning' },
-    { id: 'risco',  type: 'text',   icon: ShieldAlert,   label: 'Produto de Maior Risco', textValue: produtoMaiorRisco, detail: 'maior nº de Eng. Reversa',       accent: 'er'      },
-    { id: 'mes',    type: 'text',   icon: CalendarClock, label: 'Mês Crítico',            textValue: mesCritico,        detail: 'pico histórico de Eng. Reversa', accent: 'warning' },
-  ];
-
-  const pinnedDefs   = allCardDefs.filter((c) => pinnedCards.includes(c.id));
-  const unpinnedDefs = allCardDefs.filter((c) => !pinnedCards.includes(c.id));
-
-  // ─── Renderizador unificado de cards ──────────────────────────────────────
   const renderCard = (card, pinned) => {
     if (card.type === 'metric') {
       return (
@@ -92,7 +80,6 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
           className={`metric-card-pin${pinned ? ' is-pinned' : ''}`}
           onClick={() => togglePin(card.id)}
           title={pinned ? 'Desafixar card' : 'Fixar card no topo'}
-          aria-label={pinned ? 'Desafixar card' : 'Fixar card no topo'}
         >
           {pinned ? <PinOff size={13} /> : <Pin size={13} />}
         </button>
@@ -100,8 +87,78 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
     );
   };
 
+  // ─── Tabela: filtros ─────────────────────────────────────────────────────────
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [search,      setSearch]      = useState('');
+  const [filters, setFilters]         = useState({ produtos: [], estados: [], responsaveis: [], meses: [], anos: [] });
+  const [page,     setPage]     = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const toggleFilter = useCallback((key, value) => {
+    setFilters(prev => {
+      const current = prev[key];
+      const next = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, [key]: next };
+    });
+    setPage(1);
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setFilters({ produtos: [], estados: [], responsaveis: [], meses: [], anos: [] });
+    setPage(1);
+  }, []);
+
+  const activeCount = Object.values(filters).reduce((sum, v) => sum + v.length, 0)
+    + (search.trim() ? 1 : 0);
+
+  const filteredData = useMemo(() => {
+    const q = search.toLowerCase();
+    return rawData.filter(item => {
+      if (q && !item.title?.toLowerCase().includes(q) && !item.id?.toLowerCase().includes(q)) return false;
+      if (filters.produtos.length > 0     && !filters.produtos.includes(item.produto))        return false;
+      if (filters.estados.length > 0      && !filters.estados.includes(item.state))           return false;
+      if (filters.responsaveis.length > 0 && !filters.responsaveis.includes(item.assignedTo)) return false;
+      if (filters.meses.length > 0        && !filters.meses.includes(item.mes))               return false;
+      if (filters.anos.length > 0         && !filters.anos.includes(item.ano))                return false;
+      return true;
+    });
+  }, [rawData, search, filters]);
+
+  const { sortedData, sortConfig, requestSort } = useSort(filteredData);
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const safePage   = Math.min(page, totalPages);
+  const start      = (safePage - 1) * pageSize;
+  const pagedData  = sortedData.slice(start, start + pageSize);
+
+  const from = sortedData.length === 0 ? 0 : start + 1;
+  const to   = Math.min(start + pageSize, sortedData.length);
+
+  const handleSort = (key) => { requestSort(key); setPage(1); };
+
+  // ─── Modal histórico ─────────────────────────────────────────────────────────
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  // ─── Cards ──────────────────────────────────────────────────────────────────
+  const produtoMaisAlterado = '—';
+
+  const allCardDefs = [
+    { id: 'total', type: 'metric', icon: Layers,     label: 'Total de Casos de Uso', value: rawData.length, detail: null, accent: 'neutral' },
+    { id: 'risco', type: 'text',   icon: ShieldAlert, label: 'Produto Mais Alterado',
+      textValue: produtoMaisAlterado,
+      detail: 'em implementação futura',
+      accent: 'er' },
+  ];
+
+  const pinnedDefs   = allCardDefs.filter(c => pinnedCards.includes(c.id));
+  const unpinnedDefs = allCardDefs.filter(c => !pinnedCards.includes(c.id));
+
   return (
     <div className="analytics-page">
+      {/* ── Sticky top ── */}
       <div className="analytics-sticky-top">
         <button
           className={`app-menu-btn${menuOpen ? ' is-open' : ''}`}
@@ -114,6 +171,7 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
             <span className="hamburger-line" />
           </span>
         </button>
+
         <header className="analytics-header">
           <div>
             <h1 className="analytics-title">Analytics</h1>
@@ -126,9 +184,22 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
                 Atualizar
               </button>
             )}
+            {!loading && !error && (
+              <button
+                className={`filters-toggle-btn${filtersOpen ? ' is-active' : ''}`}
+                aria-pressed={filtersOpen}
+                onClick={() => setFiltersOpen(o => !o)}
+              >
+                <SlidersHorizontal size={14} />
+                Filtros
+                {activeCount > 0 && (
+                  <span className="filters-toggle-badge">{activeCount}</span>
+                )}
+              </button>
+            )}
             <button
               className="theme-toggle-btn"
-              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
               aria-label={theme === 'dark' ? 'Ativar Light Mode' : 'Ativar Dark Mode'}
               title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             >
@@ -144,11 +215,24 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
 
         {!loading && !error && pinnedDefs.length > 0 && (
           <div className="pinned-cards-row">
-            {pinnedDefs.map((card) => renderCard(card, true))}
+            {pinnedDefs.map(card => renderCard(card, true))}
           </div>
+        )}
+
+        {!loading && !error && filtersOpen && (
+          <AnalyticsFilterBar
+            data={rawData}
+            filters={filters}
+            toggleFilter={toggleFilter}
+            clearFilters={clearFilters}
+            isActive={activeCount > 0}
+            search={search}
+            onSearchChange={(v) => { setSearch(v); setPage(1); }}
+          />
         )}
       </div>
 
+      {/* ── Loading / Error ── */}
       {loading && (
         <div className="dashboard-status">
           <RefreshCw size={16} className="spin" />
@@ -169,169 +253,139 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
       {!loading && !error && (
         <main className="analytics-main">
 
-          {/* ─── Métricas ──────────────────────────────────────────────────────── */}
+          {/* ── Métricas ── */}
           {unpinnedDefs.length > 0 && (
             <section className="metrics-grid" aria-label="Métricas">
-              {unpinnedDefs.map((card) => renderCard(card, false))}
+              {unpinnedDefs.map(card => renderCard(card, false))}
             </section>
           )}
 
-          {/* ─── Responsável × Produto ────────────────────────────────────────── */}
-          <section className="analytics-2col">
-            <FluxoBarChart
-              title="Fluxo por Responsável (Dono do Work Item)"
-              icon={UserCheck}
-              data={metrics.porResponsavel}
-              formatLabel={aliasName}
-              forceCollapsed={chartsCollapsed}
-            />
-            <FluxoBarChart
-              title="Fluxo por Produto"
-              icon={Layers}
-              data={metrics.porProduto}
-              forceCollapsed={chartsCollapsed}
-            />
-          </section>
-
-          {/* ─── Evolução temporal ────────────────────────────────────────────── */}
-          <LineChart data={metrics.porMes} anos={[]} title="Evolução por Fluxo" dotRadius={2.5} forceCollapsed={chartsCollapsed} />
-
-          {/* ════════════════════════════════════════════════════════════════════
-              ANÁLISE ESTRATÉGICA — ENGENHARIA REVERSA
-          ════════════════════════════════════════════════════════════════════ */}
+          {/* ══ Seção: Casos de Uso ══════════════════════════════════════════════ */}
           <div className="er-section-divider" role="separator">
-            <span className="er-section-divider-label">Análise Estratégica — Engenharia Reversa</span>
+            <span className="er-section-divider-label">Casos de Uso — Histórico de Alterações</span>
           </div>
 
-          {/* ─── Insights analíticos ──────────────────────────────────────────── */}
-          <section className="analytics-3col" aria-label="Insights Analíticos">
-
-            <div className="insight-card">
-              <div className="insight-card-header">
-                <span className="insight-card-icon-wrap insight-card-icon-wrap--er">
-                  <AlertTriangle size={15} />
-                </span>
-                <h3 className="insight-card-title">Diagnóstico</h3>
-              </div>
-              <p className="insight-card-body">
-                O volume de <strong>1,9%</strong> de Eng. Reversa representa baixa incidência absoluta,
-                mas alta criticidade operacional. Cada ocorrência implica retrabalho técnico não
-                planejado, impactando diretamente a velocidade de entrega.
-              </p>
+          {/* ── Tabela ── */}
+          <div className="uc-table-wrap">
+            <div className="uc-table-header">
+              <h3 className="uc-table-title">Casos de Uso — Histórico de Alterações</h3>
+              <span className="uc-table-count">
+                {sortedData.length} {sortedData.length === 1 ? 'item' : 'itens'}
+              </span>
             </div>
 
-            <div className="insight-card">
-              <div className="insight-card-header">
-                <span className="insight-card-icon-wrap insight-card-icon-wrap--warning">
-                  <ShieldAlert size={15} />
-                </span>
-                <h3 className="insight-card-title">Risco por Produto</h3>
-              </div>
-              <p className="insight-card-body">
-                <strong>Nova Web</strong> concentra o maior risco relativo dado seu alto volume
-                (144 demandas) combinado com complexidade de integração. <strong>App Vector</strong> lidera
-                em volume total (175), tornando qualquer aumento percentual crítico em escala.
-              </p>
-            </div>
-
-            <div className="insight-card">
-              <div className="insight-card-header">
-                <span className="insight-card-icon-wrap insight-card-icon-wrap--info">
-                  <Lightbulb size={15} />
-                </span>
-                <h3 className="insight-card-title">Sazonalidade</h3>
-              </div>
-              <p className="insight-card-body">
-                Pico em <strong>Março</strong> pode indicar acúmulo pós-onboarding de início de ano ou
-                mudanças de requisitos em Q1. A queda consistente de <strong>Jun–Out</strong> sugere
-                estabilidade operacional no mid-year. Monitorar <strong>Jan–Mar</strong> como janela
-                de risco prioritária.
-              </p>
-            </div>
-
-          </section>
-
-          {/* ─── Recomendações estratégicas ───────────────────────────────────── */}
-          <section className="er-section-card" aria-label="Recomendações Estratégicas">
-            <h3 className="er-section-card-title">Recomendações Estratégicas</h3>
-            <div className="recom-table-wrapper">
-              <table className="recom-table">
+            <div className="uc-table-scroll">
+              <table className="uc-table" role="table">
                 <thead>
                   <tr>
-                    <th>Prioridade</th>
-                    <th>Ação</th>
-                    <th>Produto Alvo</th>
-                    <th>Impacto Esperado</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Título</th>
+                    {SORTABLE_COLS.map(({ key, label }) => (
+                      <th
+                        key={key}
+                        scope="col"
+                        className="sortable-th"
+                        onClick={() => handleSort(key)}
+                        aria-sort={sortConfig.key === key ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <span className="th-inner">
+                          {label}
+                          <SortIcon col={key} sortConfig={sortConfig} />
+                        </span>
+                      </th>
+                    ))}
+                    <th scope="col">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {RECOMENDACOES.map((r, i) => (
-                    <tr key={i}>
-                      <td>
-                        <span className={`recom-priority recom-priority--${r.priority}`}>
-                          {r.label}
-                        </span>
+                  {pagedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="uc-table-empty">
+                        Nenhum resultado encontrado.
                       </td>
-                      <td>{r.acao}</td>
-                      <td className="recom-td-produto">{r.produto}</td>
-                      <td className="recom-td-impacto">{r.impacto}</td>
                     </tr>
-                  ))}
+                  ) : pagedData.map((item, idx) => {
+                    const idNum = item.id.replace(/\D/g, '');
+                    return (
+                      <tr key={item.id} className="uc-table-row" style={{ animationDelay: `${idx * 12}ms` }}>
+                        <td className="cell-id">
+                          <a href={`${ADO_BASE}${idNum}`} target="_blank" rel="noreferrer" className="cell-id-link">
+                            {item.id}
+                          </a>
+                        </td>
+                        <td className="cell-title">
+                          <span title={item.title} className="title-text">{item.title}</span>
+                        </td>
+                        <td>
+                          <span className={`state-badge state-badge--${item.state.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {item.state || '—'}
+                          </span>
+                        </td>
+                        <td>{item.produto || '—'}</td>
+                        <td>{aliasName(item.assignedTo) || '—'}</td>
+                        <td>
+                          <button
+                            className="uc-historico-btn"
+                            onClick={() => setSelectedItem(item)}
+                            title="Ver histórico de alterações"
+                          >
+                            <History size={13} />
+                            Histórico
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </section>
 
-          {/* ─── KPIs de monitoramento ────────────────────────────────────────── */}
-          <section aria-label="KPIs de Monitoramento">
-            <h3 className="er-section-card-title er-section-card-title--standalone">KPIs de Monitoramento</h3>
-            <div className="monitoring-grid">
-
-              <div className={`monitoring-kpi${parseFloat(metrics.pctER) > 1.5 ? ' monitoring-kpi--alert' : ' monitoring-kpi--ok'}`}>
-                <div className="monitoring-kpi-icon"><Activity size={16} /></div>
-                <span className="monitoring-kpi-label">Taxa Mensal de Eng. Reversa</span>
-                <span className="monitoring-kpi-value">{metrics.pctER}%</span>
-                <span className="monitoring-kpi-meta">Meta: &lt; 1,5%</span>
-                {parseFloat(metrics.pctER) > 1.5 && (
-                  <span className="monitoring-kpi-badge monitoring-kpi-badge--alert">Acima da meta</span>
-                )}
+            <div className="uc-pagination">
+              <span className="pagination-info">
+                {sortedData.length > 0 ? `${from}–${to} de ${sortedData.length} itens` : '0 itens'}
+              </span>
+              <div className="pagination-center">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <PageWindow safePage={safePage} totalPages={totalPages} onPageChange={setPage} />
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  aria-label="Próxima página"
+                >
+                  <ChevronRight size={15} />
+                </button>
               </div>
-
-              <div className="monitoring-kpi monitoring-kpi--neutral">
-                <div className="monitoring-kpi-icon"><Clock3 size={16} /></div>
-                <span className="monitoring-kpi-label">Tempo Médio de Resolução</span>
-                <span className="monitoring-kpi-value">N/D</span>
-                <span className="monitoring-kpi-meta">Meta: definir baseline</span>
+              <div className="pagination-right">
+                <span className="page-size-label">Por página</span>
+                <select
+                  className="page-size-select"
+                  value={pageSize}
+                  onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  aria-label="Itens por página"
+                >
+                  {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-
-              <div className={`monitoring-kpi${produtosEmAlerta > 0 ? ' monitoring-kpi--alert' : ' monitoring-kpi--ok'}`}>
-                <div className="monitoring-kpi-icon"><BellRing size={16} /></div>
-                <span className="monitoring-kpi-label">Produtos em Alerta</span>
-                <span className="monitoring-kpi-value">{produtosEmAlerta}</span>
-                <span className="monitoring-kpi-meta">Meta: 0 produtos &gt; 3%</span>
-                {produtosEmAlerta > 0 && (
-                  <span className="monitoring-kpi-badge monitoring-kpi-badge--alert">{produtosEmAlerta} em alerta</span>
-                )}
-              </div>
-
-              <div className="monitoring-kpi monitoring-kpi--neutral">
-                <div className="monitoring-kpi-icon"><Repeat2 size={16} /></div>
-                <span className="monitoring-kpi-label">Reincidência por Produto</span>
-                <span className="monitoring-kpi-value">N/D</span>
-                <span className="monitoring-kpi-meta">Meta: 0% reincidência</span>
-              </div>
-
-              <div className="monitoring-kpi monitoring-kpi--neutral">
-                <div className="monitoring-kpi-icon"><Radar size={16} /></div>
-                <span className="monitoring-kpi-label">Índice de Detecção Precoce</span>
-                <span className="monitoring-kpi-value">N/D</span>
-                <span className="monitoring-kpi-meta">Meta: &gt; 80% antes do aceite</span>
-              </div>
-
             </div>
-          </section>
+          </div>
 
         </main>
+      )}
+
+      {/* ── Modal histórico individual ── */}
+      {selectedItem && (
+        <HistoricoModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
       )}
     </div>
   );

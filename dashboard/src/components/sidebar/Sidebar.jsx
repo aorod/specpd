@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, BarChart3, Clock, CalendarRange, Umbrella,
   House, ChevronDown, LayoutDashboard, Users, ShieldCheck,
+  Workflow,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './Sidebar.css';
@@ -11,6 +12,7 @@ const ITEM_PERMISSIONS = {
   'casos-de-uso':  { modulo: 'dashboard',     acao: 'casos_de_uso' },
   'analytics':     { modulo: 'dashboard',     acao: 'analytics' },
   'timesheet':     { modulo: 'timesheet',     acao: 'acessar' },
+  'esteira-ed':    { modulo: 'dashboard',     acao: 'esteira_ed' },
   'ferias':        { modulo: 'ferias',        acao: 'acessar' },
   'dayoff':        { modulo: 'dayoff',        acao: 'acessar' },
   'configuracoes': { modulo: 'configuracoes', acao: 'acessar' },
@@ -25,6 +27,7 @@ const ALL_MODULES = [
       { id: 'casos-de-uso', label: 'Casos de Uso', icon: BookOpen },
       { id: 'analytics',    label: 'Analytics',    icon: BarChart3 },
       { id: 'timesheet',    label: 'Timesheet',    icon: Clock },
+      { id: 'esteira-ed',   label: 'Esteira E&D',  icon: Workflow },
     ],
   },
   {

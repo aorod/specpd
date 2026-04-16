@@ -4,7 +4,7 @@
 
 export const PERMISSOES_PERFIL = {
   admin: {
-    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'exportar'],
+    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'esteira_ed', 'exportar'],
     timesheet:     ['acessar', 'visualizar', 'editar', 'exportar'],
     ferias:        ['acessar', 'criar', 'editar', 'aprovar', 'rejeitar', 'cancelar'],
     dayoff:        ['acessar', 'criar', 'editar', 'excluir'],
@@ -14,7 +14,7 @@ export const PERMISSOES_PERFIL = {
     perfil:        ['acessar'],
   },
   gestor: {
-    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'exportar'],
+    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'esteira_ed', 'exportar'],
     timesheet:     ['acessar', 'visualizar', 'editar', 'exportar'],
     ferias:        ['acessar', 'criar', 'editar', 'aprovar', 'rejeitar', 'cancelar'],
     dayoff:        ['acessar', 'criar', 'editar', 'excluir'],
@@ -24,7 +24,7 @@ export const PERMISSOES_PERFIL = {
     perfil:        ['acessar'],
   },
   coordenador: {
-    dashboard:     ['acessar', 'casos_de_uso', 'analytics'],
+    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'esteira_ed'],
     timesheet:     ['acessar', 'visualizar', 'editar'],
     ferias:        ['acessar', 'criar', 'editar', 'aprovar'],
     dayoff:        ['acessar', 'criar', 'editar'],
@@ -34,7 +34,7 @@ export const PERMISSOES_PERFIL = {
     perfil:        ['acessar'],
   },
   analista: {
-    dashboard:     ['acessar', 'casos_de_uso', 'analytics'],
+    dashboard:     ['acessar', 'casos_de_uso', 'analytics', 'esteira_ed'],
     timesheet:     ['acessar', 'visualizar', 'editar'],
     ferias:        ['acessar', 'criar'],
     dayoff:        ['acessar', 'criar'],
@@ -51,6 +51,7 @@ export const ACOES_POR_MODULO = {
     { key: 'acessar',      label: 'Acessar página' },
     { key: 'casos_de_uso', label: 'Visualizar Casos de Uso' },
     { key: 'analytics',    label: 'Visualizar Analytics' },
+    { key: 'esteira_ed',   label: 'Visualizar Esteira E&D' },
     { key: 'exportar',     label: 'Exportar dados' },
   ],
   timesheet: [

@@ -3,12 +3,13 @@ import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
-import dayoffsRouter    from './routes/dayoffs.js';
-import feriasRouter     from './routes/ferias.js';
-import calendarRouter   from './routes/calendar.js';
-import authRouter       from './routes/auth.js';
-import usersRouter      from './routes/users.js';
-import workitemsRouter  from './routes/workitems.js';
+import dayoffsRouter         from './routes/dayoffs.js';
+import feriasRouter          from './routes/ferias.js';
+import calendarRouter        from './routes/calendar.js';
+import authRouter            from './routes/auth.js';
+import usersRouter           from './routes/users.js';
+import workitemsRouter       from './routes/workitems.js';
+import userPreferencesRouter from './routes/userpreferences.js';
 import {
   isCacheValid,
   getCachedItems,
@@ -29,14 +30,15 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
-app.use('/api/auth',       authRouter);
-app.use('/api/users',      usersRouter);
-app.use('/api/dayoffs',    dayoffsRouter);
-app.use('/api/ferias',     feriasRouter);
-app.use('/api/calendar',   calendarRouter);
-app.use('/api/workitems',  workitemsRouter);
+app.use('/api/auth',             authRouter);
+app.use('/api/users',            usersRouter);
+app.use('/api/user-preferences', userPreferencesRouter);
+app.use('/api/dayoffs',          dayoffsRouter);
+app.use('/api/ferias',           feriasRouter);
+app.use('/api/calendar',         calendarRouter);
+app.use('/api/workitems',        workitemsRouter);
 
-const ORG = 'vector-brasil';
+const ORG = 'Vector-Brasil';
 const PROJECT = 'Roadmap%202025';
 const BASE_URL = `https://analytics.dev.azure.com/${ORG}/${PROJECT}/_odata/v3.0-preview`;
 const ORG_BASE_URL = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
@@ -165,6 +167,162 @@ app.get('/api/cache/status', (_req, res) => {
     ttlMinutes:   getCacheTTLMinutes(),
     lastSync:     getLastSync(),
   });
+});
+
+// ── Esteira E&D (Especificações e Design) ─────────────────────────────────────
+const ED_PROJECT  = 'Especifica%C3%A7%C3%B5es%20e%20Design';
+const ED_BASE_URL = `https://analytics.dev.azure.com/${ORG}/${ED_PROJECT}/_odata/v3.0-preview`;
+
+const ED_SELECT = [
+  'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
+  'Custom_FocalDesignSK', 'Custom_FocalRequisitoSK',
+  'Custom_PDApoio1SK', 'Custom_PDApoio2SK', 'Custom_REQApoio1SK',
+  'Custom_ProdutoControladoria', 'Custom_FocusSquad', 'Custom_Datadeentregaprevisto',
+].join(',');
+
+const ED_EXPAND = 'Iteration($select=IterationPath,IterationName),Area($select=AreaPath,AreaName)';
+
+const STATE_TO_COLUMN = {
+  'Backlog':               'backlog',
+  'Pausado':               'pausado',
+  'Descobrir/Definir':     'descobrir-definir',
+  'Desenvolver/Entregar':  'desenvolver-entregar',
+  'Review/Refinamento':    'review-refinamento',
+  'Squad':                 'squad',
+  'Em teste':              'em-teste',
+  'Concluído':             'concluido',
+};
+
+function transformEDItem(item, userMap) {
+  const tags = item.TagNames
+    ? item.TagNames.split(';').map(t => t.trim()).filter(Boolean)
+    : [];
+  const isER = tags.some(t => /engenharia reversa/i.test(t));
+
+  return {
+    id:                  item.WorkItemId,
+    workItemType:        item.WorkItemType || '',
+    title:               item.Title || '',
+    coluna:              STATE_TO_COLUMN[item.State] ?? 'backlog',
+    grupo:               'Sem Grupo',
+    status:              item.State || '',
+    fluxo:               isER ? 'ER' : 'Normal',
+    focalDesign:         userMap.get(item.Custom_FocalDesignSK) || '',
+    focalRequisito:      userMap.get(item.Custom_FocalRequisitoSK) || '',
+    pdApoio1:            userMap.get(item.Custom_PDApoio1SK) || '',
+    pdApoio2:            userMap.get(item.Custom_PDApoio2SK) || '',
+    reqApoio1:           userMap.get(item.Custom_REQApoio1SK) || '',
+    produto:             item.Custom_ProdutoControladoria || '',
+    focusSquad:          item.Custom_FocusSquad || '',
+    dataEntregaPrevista: item.Custom_Datadeentregaprevisto || null,
+    mes: (() => {
+      const parts = (item.Iteration?.IterationPath || '').split('\\');
+      const last = parts[parts.length - 1] || '';
+      // Captura "1 - Janeiro" ou "01 - Janeiro" e normaliza com zero à esquerda
+      const match = last.match(/(\d{1,2})\s*-\s*(.+)/);
+      return match ? `${match[1].padStart(2, '0')} - ${match[2].trim()}` : '';
+    })(),
+    ano: (() => {
+      const match = (item.Area?.AreaPath || '').match(/\b(\d{4})\b/);
+      return match ? match[1] : '';
+    })(),
+    tags,
+  };
+}
+
+let edCache = { items: [], fetchedAt: 0 };
+const ED_CACHE_TTL_MS = (parseInt(process.env.CACHE_TTL_MINUTES) || 30) * 60 * 1000;
+
+async function fetchFromADO_ED() {
+  const token = process.env.ADO_TOKEN;
+  if (!token) throw new Error('ADO_TOKEN não configurado no servidor');
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+
+  const usersRaw = await fetchAllPages(`${ORG_BASE_URL}/Users?$select=UserSK,UserName`, headers);
+  const userMap  = new Map(usersRaw.map(u => [u.UserSK, u.UserName]));
+
+  const filter = encodeURIComponent("WorkItemType eq 'Issue'");
+  const expand = encodeURIComponent(ED_EXPAND);
+  const raw    = await fetchAllPages(`${ED_BASE_URL}/WorkItems?$filter=${filter}&$select=${ED_SELECT}&$expand=${expand}`, headers);
+  const items = raw.map(item => transformEDItem(item, userMap));
+
+  edCache = { items, fetchedAt: Date.now() };
+  return items;
+}
+
+app.get('/api/esteira-ed', async (_req, res) => {
+  if (edCache.items.length > 0 && Date.now() - edCache.fetchedAt < ED_CACHE_TTL_MS) {
+    return res.json(edCache.items);
+  }
+  try {
+    return res.json(await fetchFromADO_ED());
+  } catch (err) {
+    if (edCache.items.length) {
+      res.set('X-Cache', 'stale');
+      return res.json(edCache.items);
+    }
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/esteira-ed/sync', async (_req, res) => {
+  try {
+    const result = await fetchFromADO_ED();
+    res.json({ ok: true, itemsCount: result.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/ed-paths ───────────────────────────────────────────────────
+// Diagnóstico: inspeciona Custom_MonthWorked e Custom_YearWorked de todos os Issues do E&D.
+app.get('/api/debug/ed-paths', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+
+  try {
+    const filter = encodeURIComponent("WorkItemType eq 'Issue'");
+    const select = encodeURIComponent('WorkItemId,Title,State');
+    const expand = encodeURIComponent(ED_EXPAND);
+    const raw = await fetchAllPages(
+      `${ED_BASE_URL}/WorkItems?$filter=${filter}&$select=${select}&$expand=${expand}`,
+      headers,
+    );
+
+    if (!raw.length) return res.json({ message: 'Nenhum Issue encontrado no projeto E&D', items: [] });
+
+    const items = raw.map(item => ({
+      id:            item.WorkItemId,
+      title:         item.Title,
+      state:         item.State,
+      iterationPath: item.Iteration?.IterationPath || null,
+      areaPath:      item.Area?.AreaPath || null,
+      mes: (() => {
+        const parts = (item.Iteration?.IterationPath || '').split('\\');
+        const last = parts[parts.length - 1] || '';
+        const match = last.match(/(\d{1,2})\s*-\s*(.+)/);
+        return match ? `${match[1].padStart(2, '0')} - ${match[2].trim()}` : null;
+      })(),
+      ano: (() => {
+        const match = (item.Area?.AreaPath || '').match(/\b(\d{4})\b/);
+        return match ? match[1] : null;
+      })(),
+    }));
+
+    const semMes        = items.filter(i => !i.mes).length;
+    const semAno        = items.filter(i => !i.ano).length;
+    const meses         = [...new Set(items.map(i => i.mes).filter(Boolean))].sort();
+    const anos          = [...new Set(items.map(i => i.ano).filter(Boolean))].sort((a, b) => b - a);
+    const iterPaths     = [...new Set(raw.map(i => i.Iteration?.IterationPath).filter(Boolean))].sort();
+    const areaPaths     = [...new Set(raw.map(i => i.Area?.AreaPath).filter(Boolean))].sort();
+
+    res.json({ total: items.length, semMes, semAno, meses, anos, iterPaths, areaPaths, items });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── GET /api/debug/timesheet-fields ──────────────────────────────────────────

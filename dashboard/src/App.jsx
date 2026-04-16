@@ -12,6 +12,7 @@ import DayOffPage from './pages/DayOffPage.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
 import ConfiguracoesPage from './pages/ConfiguracoesPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import EsteiraEDPage from './pages/EsteiraEDPage.jsx';
 
 // Permissão necessária para acessar cada página
 const PAGE_PERMISSIONS = {
@@ -22,6 +23,7 @@ const PAGE_PERMISSIONS = {
   'dayoff':        { modulo: 'dayoff',        acao: 'acessar' },
   'calendario':    { modulo: 'calendario',    acao: 'acessar' },
   'configuracoes': { modulo: 'configuracoes', acao: 'acessar' },
+  'esteira-ed':    { modulo: 'dashboard',     acao: 'esteira_ed' },
 };
 
 export default function App() {
@@ -76,6 +78,7 @@ export default function App() {
         {activePage === 'calendario'     && <CalendarPage   theme={theme} setTheme={setTheme} {...menuProps} />}
         {activePage === 'configuracoes'  && <ConfiguracoesPage theme={theme} setTheme={setTheme} {...menuProps} />}
         {activePage === 'perfil'          && <ProfilePage       theme={theme} setTheme={setTheme} {...menuProps} />}
+        {activePage === 'esteira-ed'      && <EsteiraEDPage     theme={theme} setTheme={setTheme} {...menuProps} />}
       </div>
     </div>
   );

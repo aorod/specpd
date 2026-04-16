@@ -5,7 +5,11 @@ services:
   backend:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm install && node index.js"
+    # Instala ferramentas de build necessárias para compilar better-sqlite3 (módulo nativo)
+    command: >
+      sh -c "apk add --no-cache python3 make g++ &&
+             npm install &&
+             node index.js"
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -16,6 +20,12 @@ services:
       - ./dashboard/server/.env
     environment:
       NODE_ENV: development
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/cache/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s   # tempo para npm install + compilação nativa
     networks:
       - app-network
 
@@ -32,7 +42,8 @@ services:
     environment:
       BACKEND_URL: http://backend:3001      # proxy do Vite aponta pro service do compose
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy          # só sobe após backend responder
     networks:
       - app-network
 

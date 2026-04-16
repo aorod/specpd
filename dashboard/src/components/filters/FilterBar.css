@@ -117,6 +117,28 @@
   border-color: var(--color-text-muted);
 }
 
+/* Personalizar Exibição button */
+.filter-customize-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 20px;
+  border: 1px solid var(--color-accent);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 150ms, opacity 150ms;
+}
+
+.filter-customize-btn:hover {
+  background: rgba(99, 102, 241, 0.16);
+}
+
 /* Clear all button */
 .filter-clear-btn {
   display: flex;

@@ -87,6 +87,14 @@ db.exec(`
     ativo      INTEGER NOT NULL DEFAULT 1,
     criado_em  TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS user_preferences (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL UNIQUE,
+    visible_cards   TEXT    NOT NULL DEFAULT '["Backlog","Desenvolver/Entregar","Em teste","Concluído"]',
+    atualizado_em   TEXT    DEFAULT (datetime('now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // ── Conversões row ↔ item ─────────────────────────────────────────────────────
@@ -224,6 +232,22 @@ export function updateUser(id, { nome, email, senhaHash, papel, ativo }) {
 
 export function deleteUser(id) {
   db.prepare('DELETE FROM users WHERE id = ?').run(id);
+}
+
+// ── Preferências por usuário ───────────────────────────────────────────────────
+
+export function getUserPreferences(userId) {
+  return db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId) ?? null;
+}
+
+export function upsertUserPreferences(userId, visibleCards) {
+  db.prepare(`
+    INSERT INTO user_preferences (user_id, visible_cards, atualizado_em)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(user_id) DO UPDATE SET
+      visible_cards = excluded.visible_cards,
+      atualizado_em = excluded.atualizado_em
+  `).run(userId, JSON.stringify(visibleCards));
 }
 
 export default db;
