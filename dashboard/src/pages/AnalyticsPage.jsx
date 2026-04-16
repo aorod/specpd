@@ -2,15 +2,16 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   RefreshCw, AlertCircle, RotateCcw, Sun, Moon,
   Layers, Pin, PinOff, SlidersHorizontal, History, ChevronLeft, ChevronRight,
-  ShieldAlert, ChevronsUpDown, ChevronUp, ChevronDown,
+  ShieldAlert, ChevronsUpDown, ChevronUp, ChevronDown, BarChart2, Table2,
 } from 'lucide-react';
 import { useUCData }              from '../hooks/useUCData.js';
-import { useSort }   from '../hooks/useSort.js';
-import { aliasName } from '../utils/nameAliases.js';
+import { useSort }                from '../hooks/useSort.js';
+import { aliasName }              from '../utils/nameAliases.js';
 import MetricCard                 from '../components/cards/MetricCard.jsx';
 import ProfileMenu                from '../components/profile/ProfileMenu.jsx';
 import HistoricoModal             from '../components/analytics/HistoricoModal.jsx';
 import AnalyticsFilterBar         from '../components/filters/AnalyticsFilterBar.jsx';
+import InsightsTab                from '../components/analytics/InsightsTab.jsx';
 import '../components/table/UCTable.css';
 import './AnalyticsPage.css';
 
@@ -47,6 +48,14 @@ function PageWindow({ safePage, totalPages, onPageChange }) {
 
 export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
   const { data: rawData, loading, error, retry } = useUCData();
+
+  // ─── Tab ──────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('tabela'); // 'tabela' | 'insights'
+
+  // ─── Filtros da aba Insights ───────────────────────────────────────────────
+  const [insightsFiltersOpen,  setInsightsFiltersOpen]  = useState(true);
+  const [insightsActiveCount,  setInsightsActiveCount]  = useState(0);
+
   // ─── Pinned cards ───────────────────────────────────────────────────────────
   const [pinnedCards, setPinnedCards] = useState([]);
   const togglePin = (id) =>
@@ -178,13 +187,33 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
             <p className="analytics-subtitle">Visão estratégica dos Casos de Uso · Análise Estratégica 2026</p>
           </div>
           <div className="analytics-header-right">
+            {/* ── Tab switcher ── */}
+            {!loading && !error && (
+              <div className="analytics-tab-switcher">
+                <button
+                  className={`analytics-tab-btn${activeTab === 'tabela' ? ' is-active' : ''}`}
+                  onClick={() => setActiveTab('tabela')}
+                >
+                  <Table2 size={13} />
+                  Tabela
+                </button>
+                <button
+                  className={`analytics-tab-btn${activeTab === 'insights' ? ' is-active' : ''}`}
+                  onClick={() => setActiveTab('insights')}
+                >
+                  <BarChart2 size={13} />
+                  Insights Estratégicos
+                </button>
+              </div>
+            )}
+
             {!loading && (
               <button className="refresh-btn" onClick={retry} disabled={loading} title="Atualizar dados">
                 <RefreshCw size={13} className={loading ? 'spin' : ''} />
                 Atualizar
               </button>
             )}
-            {!loading && !error && (
+            {!loading && !error && activeTab === 'tabela' && (
               <button
                 className={`filters-toggle-btn${filtersOpen ? ' is-active' : ''}`}
                 aria-pressed={filtersOpen}
@@ -194,6 +223,19 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
                 Filtros
                 {activeCount > 0 && (
                   <span className="filters-toggle-badge">{activeCount}</span>
+                )}
+              </button>
+            )}
+            {!loading && !error && activeTab === 'insights' && (
+              <button
+                className={`filters-toggle-btn${insightsFiltersOpen ? ' is-active' : ''}`}
+                aria-pressed={insightsFiltersOpen}
+                onClick={() => setInsightsFiltersOpen(o => !o)}
+              >
+                <SlidersHorizontal size={14} />
+                Filtros
+                {insightsActiveCount > 0 && (
+                  <span className="filters-toggle-badge">{insightsActiveCount}</span>
                 )}
               </button>
             )}
@@ -219,7 +261,7 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
           </div>
         )}
 
-        {!loading && !error && filtersOpen && (
+        {!loading && !error && activeTab === 'tabela' && filtersOpen && (
           <AnalyticsFilterBar
             data={rawData}
             filters={filters}
@@ -254,13 +296,23 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
         <main className="analytics-main">
 
           {/* ── Métricas ── */}
-          {unpinnedDefs.length > 0 && (
+          {unpinnedDefs.length > 0 && activeTab !== 'insights' && (
             <section className="metrics-grid" aria-label="Métricas">
               {unpinnedDefs.map(card => renderCard(card, false))}
             </section>
           )}
 
-          {/* ══ Seção: Casos de Uso ══════════════════════════════════════════════ */}
+          {/* ══ Aba: Insights Estratégicos ══ */}
+          {activeTab === 'insights' && (
+            <InsightsTab
+              rawData={rawData}
+              filtersOpen={insightsFiltersOpen}
+              onActiveCountChange={setInsightsActiveCount}
+            />
+          )}
+
+          {/* ══ Aba: Tabela ══════════════════════════════════════════════════════ */}
+          {activeTab === 'tabela' && (<>
           <div className="er-section-divider" role="separator">
             <span className="er-section-divider-label">Casos de Uso — Histórico de Alterações</span>
           </div>
@@ -376,6 +428,7 @@ export default function AnalyticsPage({ theme, setTheme, menuOpen, onMenuToggle,
               </div>
             </div>
           </div>
+          </>)}
 
         </main>
       )}

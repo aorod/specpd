@@ -229,6 +229,45 @@
 }
 
 
+/* ─── Tab switcher ────────────────────────────────────────────────────────── */
+.analytics-tab-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.analytics-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+  white-space: nowrap;
+}
+
+.analytics-tab-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.analytics-tab-btn.is-active {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
 /* ─── Histórico button ────────────────────────────────────────────────────── */
 .uc-historico-btn {
   display: inline-flex;
