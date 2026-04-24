@@ -14,6 +14,8 @@ for (const sql of [
   `ALTER TABLE ferias ADD COLUMN status       TEXT    DEFAULT 'Em Aprovação Gestor'`,
   `ALTER TABLE ferias ADD COLUMN venda_ferias INTEGER DEFAULT 0`,
   `ALTER TABLE ferias ADD COLUMN antecipar_13 INTEGER DEFAULT 0`,
+  `ALTER TABLE work_items ADD COLUMN embarcador  TEXT`,
+  `ALTER TABLE work_items ADD COLUMN solicitante TEXT`,
 ]) {
   try { db.exec(sql); } catch { /* column already exists */ }
 }
@@ -116,6 +118,8 @@ export function rowToItem(row) {
     atividade:    row.atividade,
     equipe:       row.equipe,
     effort:       row.effort,
+    embarcador:   row.embarcador  || '',
+    solicitante:  row.solicitante || '',
   };
 }
 
@@ -136,6 +140,8 @@ function itemToRow(item) {
     atividade:      item.atividade,
     equipe:         item.equipe,
     effort:         item.effort ?? null,
+    embarcador:     item.embarcador  || null,
+    solicitante:    item.solicitante || null,
   };
 }
 
@@ -158,10 +164,12 @@ export function getCachedItems() {
 const stmtInsert = db.prepare(`
   INSERT OR REPLACE INTO work_items
     (id, work_item_type, title, assigned_to, state, sub_status,
-     requisito, mes, ano, designer, produto, tags, atividade, equipe, effort)
+     requisito, mes, ano, designer, produto, tags, atividade, equipe, effort,
+     embarcador, solicitante)
   VALUES
     (@id, @work_item_type, @title, @assigned_to, @state, @sub_status,
-     @requisito, @mes, @ano, @designer, @produto, @tags, @atividade, @equipe, @effort)
+     @requisito, @mes, @ano, @designer, @produto, @tags, @atividade, @equipe, @effort,
+     @embarcador, @solicitante)
 `);
 
 const replaceAll = db.transaction((items) => {

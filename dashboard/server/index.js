@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
+import { requireAuth }       from './middleware/authMiddleware.js';
 import dayoffsRouter         from './routes/dayoffs.js';
 import feriasRouter          from './routes/ferias.js';
 import calendarRouter        from './routes/calendar.js';
@@ -50,6 +51,7 @@ const WI_SELECT = [
   'Custom_SubStatus', 'Custom_RequisitoSK', 'Custom_DesignerSK',
   'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
   'Custom_Atividade', 'Effort',
+  'Custom_Embarcador', 'Custom_Solicitante',
   MES_FIELD, 'AssignedToUserSK',
 ].join(',');
 
@@ -76,6 +78,8 @@ function transformItem(item, userMap) {
     atividade:    item.Custom_Atividade || '',
     equipe:       item.Custom_Equipe || '',
     effort:       item.Effort ?? null,
+    embarcador:   item.Custom_Embarcador || '',
+    solicitante:  item.Custom_Solicitante || '',
   };
 }
 
@@ -275,6 +279,9 @@ app.post('/api/esteira-ed/sync', async (_req, res) => {
   }
 });
 
+// ── Rotas de diagnóstico — requerem autenticação ──────────────────────────────
+app.use('/api/debug', requireAuth);
+
 // ── GET /api/debug/ed-paths ───────────────────────────────────────────────────
 // Diagnóstico: inspeciona Custom_MonthWorked e Custom_YearWorked de todos os Issues do E&D.
 app.get('/api/debug/ed-paths', async (_req, res) => {
@@ -346,6 +353,90 @@ app.get('/api/debug/timesheet-fields', async (_req, res) => {
     const sample = raw[0];
     const fields = Object.keys(sample).map((key) => ({ field: key, value: sample[key] }));
     res.json({ totalFound: raw.length, sampleFields: fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/caso-de-uso-fields ────────────────────────────────────────
+// Diagnóstico: inspeciona todos os campos brutos de um Caso de Uso no ADO.
+app.get('/api/debug/caso-de-uso-fields', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+
+  try {
+    const filter = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
+    const url = `${BASE_URL}/WorkItems?$filter=${filter}&$top=1`;
+    const raw = await fetchAllPages(url, headers);
+
+    if (!raw.length) return res.json({ message: 'Nenhum Caso de Uso encontrado', fields: [] });
+
+    const sample = raw[0];
+    const fields = Object.keys(sample).map((key) => ({ field: key, value: sample[key] }));
+    res.json({ totalFound: raw.length, sampleFields: fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/analytics-item/:id ────────────────────────────────────────
+// Diagnóstico: busca um work item específico na Analytics API e exibe todos os campos brutos.
+app.get('/api/debug/analytics-item/:id', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+  const wiId = Number(req.params.id);
+
+  try {
+    const filter = encodeURIComponent(`WorkItemId eq ${wiId}`);
+    const url = `${BASE_URL}/WorkItems?$filter=${filter}`;
+    const raw = await fetchAllPages(url, headers);
+
+    if (!raw.length) return res.json({ message: `Item ${wiId} não encontrado na Analytics API` });
+
+    const item = raw[0];
+    const fields = Object.entries(item).map(([key, value]) => ({ field: key, value }));
+    res.json({ workItemId: wiId, fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/caso-de-uso-wi-fields/:id ─────────────────────────────────
+// Diagnóstico: busca um Caso de Uso via Work Items REST API e exibe todos os campos brutos.
+// Aceita um ID específico: /api/debug/caso-de-uso-wi-fields/35414
+app.get('/api/debug/caso-de-uso-wi-fields/:id?', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json', 'Content-Type': 'application/json' };
+  const ORG_RAW = 'Vector-Brasil';
+  const PROJECT_RAW = 'Roadmap 2025';
+
+  try {
+    let wiId = req.params.id ? Number(req.params.id) : null;
+
+    if (!wiId) {
+      const wiqlUrl = `https://dev.azure.com/${ORG_RAW}/${encodeURIComponent(PROJECT_RAW)}/_apis/wit/wiql?api-version=7.1`;
+      const wiqlRes = await fetch(wiqlUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query: "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Caso de Uso' ORDER BY [System.Id] DESC" }),
+      });
+      const wiqlData = await wiqlRes.json();
+      wiId = wiqlData.workItems?.[0]?.id;
+      if (!wiId) return res.json({ message: 'Nenhum Caso de Uso encontrado' });
+    }
+
+    const wiUrl = `https://dev.azure.com/${ORG_RAW}/${encodeURIComponent(PROJECT_RAW)}/_apis/wit/workitems/${wiId}?$expand=fields&api-version=7.1`;
+    const wiRes = await fetch(wiUrl, { headers });
+    const wiData = await wiRes.json();
+
+    const fields = Object.entries(wiData.fields || {}).map(([key, value]) => ({ field: key, value }));
+    res.json({ workItemId: wiId, fields });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
