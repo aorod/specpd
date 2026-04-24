@@ -1,0 +1,112 @@
+================================================================================
+RESUMO TECNICO — SpecPD
+Gerado em: 2026-04-24
+================================================================================
+
+ESTRUTURA DO PROJETO
+--------------------
+Monorepo com separação frontend/backend dentro de /dashboard.
+
+  specpd/
+  ├── dashboard/
+  │   ├── src/          → Frontend React (components, pages, context, api, hooks, utils)
+  │   ├── server/       → Backend Express (routes, db.js, middleware)
+  │   └── dist/         → Build gerado pelo Vite
+  ├── docker-compose.yml
+  └── docker-compose.prod.yml
+
+LINGUAGENS
+----------
+- JavaScript ES6+ com JSX (frontend e backend)
+- Sem TypeScript
+- Textos e comentários em Português (PT-BR)
+
+FRONTEND
+--------
+Framework : React 18.3.1
+Bundler   : Vite 5.4.2
+Gráficos  : Recharts 2.12.0
+Ícones    : Lucide React 0.441.0
+PDF       : pdfjs-dist 5.6.205
+Excel     : xlsx 0.18.5
+Estado    : React Context (AuthContext) — sem Redux ou Zustand
+
+BACKEND
+-------
+Runtime   : Node.js >= 18
+Framework : Express 4.19.0
+Banco     : SQLite via better-sqlite3 12.8.0 (síncrono, WAL mode)
+Auth      : JWT via jsonwebtoken 9.0.2 (expiração 8h)
+Senhas    : bcryptjs 2.4.3
+Env vars  : dotenv 16.4.0
+
+BANCO DE DADOS
+--------------
+Tecnologia  : SQLite (arquivo data.db)
+ORM         : Nenhum — SQL puro com prepared statements
+WAL mode    : Habilitado para concorrência
+Cache TTL   : 30 minutos (configurável via env CACHE_TTL_MINUTES)
+
+Tabelas:
+  work_items       → Work items sincronizados do Azure DevOps
+  sync_log         → Controle de cache e última sincronização
+  users            → Usuários, credenciais e roles
+  user_preferences → Preferências de colunas por usuário
+  ferias           → Registros de férias
+  day_offs         → Registros de abonos
+  calendar_events  → Eventos do calendário corporativo
+
+INTEGRAÇÃO EXTERNA
+------------------
+API     : Azure DevOps Analytics (OData v3.0-preview)
+Projetos: "Roadmap 2025" e "Especificações e Design"
+Paginação via @odata.nextLink
+
+AUTENTICAÇÃO
+------------
+Modelo   : JWT stateless
+Expiração: 8 horas
+Storage  : localStorage (cliente)
+Header   : Authorization: Bearer <token>
+Roles    : admin / viewer / viewer-read
+Middleware: requireAuth (todas as rotas), requireAdmin (rotas admin)
+
+API REST
+--------
+Estilo  : REST — JSON puro, sem GraphQL
+Proxy   : Vite encaminha /api/* para Express (porta 3001)
+
+Endpoints principais:
+  POST /api/auth/login            → Login
+  GET  /api/auth/me               → Validação do token atual
+  GET  /api/analytics             → Work items (cache ou ADO)
+  POST /api/sync                  → Força sync imediato com ADO
+  GET  /api/cache/status          → Saúde do cache
+  GET|POST /api/users/*           → Gestão de usuários (admin)
+  GET|POST /api/ferias/*          → Gestão de férias
+  GET|POST /api/dayoffs/*         → Gestão de abonos
+  GET|POST /api/calendar/*        → Eventos de calendário
+  GET|POST /api/workitems/*       → CRUD de work items
+  GET|POST /api/user-preferences/* → Preferências de colunas
+
+TOOLING DE DESENVOLVIMENTO
+--------------------------
+Linter    : ESLint 9 (flat config) com plugins react e react-hooks
+Formatter : Prettier (single quotes, 2 spaces, trailing comma ES5, print width 100)
+Docker    : Compose para dev (hot reload) e prod (multi-stage build)
+Backend   : Node --watch para auto-restart em desenvolvimento
+Frontend  : Vite HMR com polling habilitado (compatibilidade Windows/Docker)
+
+TESTES
+------
+Estado atual: sem infraestrutura de testes configurada
+Pasta test/ existe mas está vazia
+Sem CI/CD pipeline
+
+AMBIENTES
+---------
+Desenvolvimento : docker-compose.yml          (porta 5173 frontend / 3001 backend)
+Produção        : docker-compose.prod.yml     (multi-stage build, container único)
+Node volumes    : isolados para compatibilidade com bind mounts no Windows
+
+================================================================================
