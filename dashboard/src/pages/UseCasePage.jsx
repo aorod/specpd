@@ -11,6 +11,7 @@ import EmbarcadorFilterBar from '../components/filters/EmbarcadorFilterBar.jsx';
 import DonutChart from '../components/charts/DonutChart.jsx';
 import HorizontalBarChart from '../components/charts/HorizontalBarChart.jsx';
 import VerticalBarChart from '../components/charts/VerticalBarChart.jsx';
+import ColumnChart from '../components/charts/ColumnChart.jsx';
 import RequisitoChart from '../components/charts/RequisitoChart.jsx';
 import LineChart from '../components/charts/LineChart.jsx';
 import UCTable from '../components/table/UCTable.jsx';
@@ -320,33 +321,16 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, o
           )}
 
           <section className="charts-grid" aria-label="Gráficos de Embarcadores">
-            <VerticalBarChart
-              data={embMetrics.porEmbarcador}
-              title="Por Embarcador"
-              tooltipLabel="Total de UCs"
-              forceCollapsed={embChartsCollapsed}
-            />
-            <VerticalBarChart
-              data={embMetrics.porProduto}
-              title="Por Produto"
-              tooltipLabel="Total de UCs"
-              forceCollapsed={embChartsCollapsed}
-            />
             <div style={{ gridColumn: '1 / -1' }}>
-              <LineChart
-                data={embMetrics.porMes}
-                anos={embFilters.anos}
-                dotRadius={2.5}
-                title="Evolução Mensal"
+              <ColumnChart
+                data={embMetrics.porEmbarcador}
+                title="Por Embarcador"
+                tooltipLabel="Total de UCs"
                 forceCollapsed={embChartsCollapsed}
+                showMiniCards={false}
+                formatValue={(v) => String(Math.round(v))}
               />
             </div>
-            <VerticalBarChart
-              data={embMetrics.porAssignedTo}
-              title="Por PM&A (Responsável)"
-              tooltipLabel="Total de UCs"
-              forceCollapsed={embChartsCollapsed}
-            />
           </section>
 
           <section aria-label="Tabela de UCs — Embarcadores">
