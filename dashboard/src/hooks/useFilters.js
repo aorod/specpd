@@ -4,6 +4,7 @@ import { classifyFluxo } from '../utils/classifyFluxo.js';
 const DEFAULT_ANO = String(new Date().getFullYear());
 
 export const INITIAL_FILTERS = {
+  projetos: [],
   anos: [DEFAULT_ANO],
   meses: [],
   states: [],
@@ -19,6 +20,7 @@ export function useFilters(data) {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      if (filters.projetos.length > 0 && !filters.projetos.includes(item.projeto)) return false;
       if (filters.anos.length > 0 && !filters.anos.includes(item.ano)) return false;
       if (filters.meses.length > 0 && !filters.meses.includes(item.mes)) return false;
       if (filters.states.length > 0 && !filters.states.includes(item.state)) return false;

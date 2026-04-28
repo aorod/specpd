@@ -40,9 +40,11 @@ app.use('/api/calendar',         calendarRouter);
 app.use('/api/workitems',        workitemsRouter);
 
 const ORG = 'Vector-Brasil';
-const PROJECT = 'Roadmap%202025';
-const BASE_URL = `https://analytics.dev.azure.com/${ORG}/${PROJECT}/_odata/v3.0-preview`;
-const ORG_BASE_URL = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
+const PROJECT_2025 = 'Roadmap%202025';
+const PROJECT_2026 = 'Roadmap%202026';
+const BASE_URL      = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2025}/_odata/v3.0-preview`;
+const BASE_URL_2026 = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2026}/_odata/v3.0-preview`;
+const ORG_BASE_URL  = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
 
 const MES_FIELD = 'Custom_ac3892be__002De47f__002D4103__002Da7a5__002D74b5b56ddb83';
 
@@ -59,9 +61,10 @@ function authHeader(token) {
   return `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
 }
 
-function transformItem(item, userMap) {
+function transformItem(item, userMap, projeto) {
   const mesRaw = item[MES_FIELD] || '';
   const monthPart = mesRaw ? String(mesRaw).split(' - ')[0].padStart(2, '0') : '';
+  const projetoAno = projeto ? (projeto.match(/\b(\d{4})\b/) || [])[1] ?? '' : '';
   return {
     id:           `${item.WorkItemType === 'Timesheet' ? 'TS' : 'UC'}-${item.WorkItemId}`,
     workItemType: item.WorkItemType,
@@ -71,7 +74,7 @@ function transformItem(item, userMap) {
     subStatus:    item.Custom_SubStatus || '',
     requisito:    userMap.get(item.Custom_RequisitoSK) || '',
     mes:          monthPart,
-    ano:          String(item.Custom_Ano || ''),
+    ano:          String(item.Custom_Ano || '') || projetoAno,
     designer:     userMap.get(item.Custom_DesignerSK) || '',
     produto:      item.Custom_ProdutoControladoria || '',
     tags:         item.TagNames || '',
@@ -80,6 +83,7 @@ function transformItem(item, userMap) {
     effort:       item.Effort ?? null,
     embarcador:   item.Custom_Embarcador || '',
     solicitante:  item.Custom_Solicitante || '',
+    projeto:      projeto || '',
   };
 }
 
@@ -114,15 +118,46 @@ async function fetchFromADO() {
   const usersRaw = await fetchAllPages(usersUrl, headers);
   const userMap = new Map(usersRaw.map((u) => [u.UserSK, u.UserName]));
 
-  const filterUC = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
-  const filterTS = encodeURIComponent("WorkItemType eq 'Timesheet'");
+  const filterUC      = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
+  const filterTS      = encodeURIComponent("WorkItemType eq 'Timesheet'");
+  const filterStories = encodeURIComponent("WorkItemType eq 'Stories'");
 
-  const [ucRaw, tsRaw] = await Promise.all([
+  const [ucRaw25, tsRaw25] = await Promise.all([
     fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterUC}&$select=${WI_SELECT}`, headers),
     fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
   ]);
 
-  const result = [...ucRaw, ...tsRaw].map((item) => transformItem(item, userMap));
+  let storiesRaw26 = [], tsRaw26 = [];
+  try {
+    [storiesRaw26, tsRaw26] = await Promise.all([
+      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT}`, headers),
+      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
+    ]);
+    console.log(`[Roadmap 2026] Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
+  } catch (err) {
+    console.warn('[Roadmap 2026] Fetch falhou, usando WI_SELECT reduzido:', err.message);
+    const WI_SELECT_2026 = [
+      'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
+      'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
+      'Custom_Atividade', 'Effort', MES_FIELD, 'AssignedToUserSK',
+    ].join(',');
+    try {
+      [storiesRaw26, tsRaw26] = await Promise.all([
+        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT_2026}`, headers),
+        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT_2026}`, headers),
+      ]);
+      console.log(`[Roadmap 2026] Retry OK — Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
+    } catch (err2) {
+      console.error('[Roadmap 2026] Retry também falhou:', err2.message);
+    }
+  }
+
+  const from2025 = [...ucRaw25, ...tsRaw25].map((item) => transformItem(item, userMap, 'Roadmap 2025'));
+  const from2026 = [
+    ...storiesRaw26.map((item) => transformItem({ ...item, WorkItemType: 'Caso de Uso' }, userMap, 'Roadmap 2026')),
+    ...tsRaw26.map((item) => transformItem(item, userMap, 'Roadmap 2026')),
+  ];
+  const result = [...from2025, ...from2026];
   saveItems(result);
   logSync('success', result.length);
   return result;
@@ -437,6 +472,22 @@ app.get('/api/debug/caso-de-uso-wi-fields/:id?', async (req, res) => {
 
     const fields = Object.entries(wiData.fields || {}).map(([key, value]) => ({ field: key, value }));
     res.json({ workItemId: wiId, fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/wit-types-2026 ───────────────────────────────────────────────────
+// Diagnóstico público: lista os WorkItemTypes distintos do projeto Roadmap 2026.
+app.get('/api/wit-types-2026', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado' });
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+  try {
+    const url = `${BASE_URL_2026}/WorkItems?$apply=groupby((WorkItemType))`;
+    const raw = await fetchAllPages(url, headers);
+    const types = raw.map((r) => r.WorkItemType).filter(Boolean).sort();
+    res.json({ types, total: types.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
