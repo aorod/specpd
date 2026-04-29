@@ -40,9 +40,7 @@ app.use('/api/calendar',         calendarRouter);
 app.use('/api/workitems',        workitemsRouter);
 
 const ORG = 'Vector-Brasil';
-const PROJECT_2025 = 'Roadmap%202025';
 const PROJECT_2026 = 'Roadmap%202026';
-const BASE_URL      = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2025}/_odata/v3.0-preview`;
 const BASE_URL_2026 = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2026}/_odata/v3.0-preview`;
 const ORG_BASE_URL  = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
 
@@ -118,46 +116,18 @@ async function fetchFromADO() {
   const usersRaw = await fetchAllPages(usersUrl, headers);
   const userMap = new Map(usersRaw.map((u) => [u.UserSK, u.UserName]));
 
-  const filterUC      = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
   const filterTS      = encodeURIComponent("WorkItemType eq 'Timesheet'");
   const filterStories = encodeURIComponent("WorkItemType eq 'Stories'");
 
-  const [ucRaw25, tsRaw25] = await Promise.all([
-    fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterUC}&$select=${WI_SELECT}`, headers),
-    fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
+  const [storiesRaw, tsRaw] = await Promise.all([
+    fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT}`, headers),
+    fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
   ]);
 
-  let storiesRaw26 = [], tsRaw26 = [];
-  try {
-    [storiesRaw26, tsRaw26] = await Promise.all([
-      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT}`, headers),
-      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
-    ]);
-    console.log(`[Roadmap 2026] Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
-  } catch (err) {
-    console.warn('[Roadmap 2026] Fetch falhou, usando WI_SELECT reduzido:', err.message);
-    const WI_SELECT_2026 = [
-      'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
-      'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
-      'Custom_Atividade', 'Effort', MES_FIELD, 'AssignedToUserSK',
-    ].join(',');
-    try {
-      [storiesRaw26, tsRaw26] = await Promise.all([
-        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT_2026}`, headers),
-        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT_2026}`, headers),
-      ]);
-      console.log(`[Roadmap 2026] Retry OK — Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
-    } catch (err2) {
-      console.error('[Roadmap 2026] Retry também falhou:', err2.message);
-    }
-  }
-
-  const from2025 = [...ucRaw25, ...tsRaw25].map((item) => transformItem(item, userMap, 'Roadmap 2025'));
-  const from2026 = [
-    ...storiesRaw26.map((item) => transformItem({ ...item, WorkItemType: 'Caso de Uso' }, userMap, 'Roadmap 2026')),
-    ...tsRaw26.map((item) => transformItem(item, userMap, 'Roadmap 2026')),
+  const result = [
+    ...storiesRaw.map((item) => transformItem({ ...item, WorkItemType: 'Caso de Uso' }, userMap, 'Roadmap 2026')),
+    ...tsRaw.map((item) => transformItem(item, userMap, 'Roadmap 2026')),
   ];
-  const result = [...from2025, ...from2026];
   saveItems(result);
   logSync('success', result.length);
   return result;
@@ -380,7 +350,7 @@ app.get('/api/debug/timesheet-fields', async (_req, res) => {
 
   try {
     const filter = encodeURIComponent("WorkItemType eq 'Timesheet'");
-    const url = `${BASE_URL}/WorkItems?$filter=${filter}&$top=1`;
+    const url = `${BASE_URL_2026}/WorkItems?$filter=${filter}&$top=1`;
     const raw = await fetchAllPages(url, headers);
 
     if (!raw.length) return res.json({ message: 'Nenhum Timesheet encontrado', fields: [] });
@@ -402,8 +372,8 @@ app.get('/api/debug/caso-de-uso-fields', async (_req, res) => {
   const headers = { Authorization: authHeader(token), Accept: 'application/json' };
 
   try {
-    const filter = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
-    const url = `${BASE_URL}/WorkItems?$filter=${filter}&$top=1`;
+    const filter = encodeURIComponent("WorkItemType eq 'Stories'");
+    const url = `${BASE_URL_2026}/WorkItems?$filter=${filter}&$top=1`;
     const raw = await fetchAllPages(url, headers);
 
     if (!raw.length) return res.json({ message: 'Nenhum Caso de Uso encontrado', fields: [] });
@@ -427,7 +397,7 @@ app.get('/api/debug/analytics-item/:id', async (req, res) => {
 
   try {
     const filter = encodeURIComponent(`WorkItemId eq ${wiId}`);
-    const url = `${BASE_URL}/WorkItems?$filter=${filter}`;
+    const url = `${BASE_URL_2026}/WorkItems?$filter=${filter}`;
     const raw = await fetchAllPages(url, headers);
 
     if (!raw.length) return res.json({ message: `Item ${wiId} não encontrado na Analytics API` });
@@ -449,7 +419,7 @@ app.get('/api/debug/caso-de-uso-wi-fields/:id?', async (req, res) => {
 
   const headers = { Authorization: authHeader(token), Accept: 'application/json', 'Content-Type': 'application/json' };
   const ORG_RAW = 'Vector-Brasil';
-  const PROJECT_RAW = 'Roadmap 2025';
+  const PROJECT_RAW = 'Roadmap 2026';
 
   try {
     let wiId = req.params.id ? Number(req.params.id) : null;

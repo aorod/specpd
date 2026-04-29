@@ -6,7 +6,6 @@ import './FilterBar.css';
 
 function filterExcluding(data, filters, excludeKey) {
   return data.filter((item) => {
-    if (excludeKey !== 'projetos'     && filters.projetos.length > 0     && !filters.projetos.includes(item.projeto)) return false;
     if (excludeKey !== 'anos'         && filters.anos.length > 0         && !filters.anos.includes(item.ano))         return false;
     if (excludeKey !== 'meses'        && filters.meses.length > 0        && !filters.meses.includes(item.mes))        return false;
     if (excludeKey !== 'states'       && filters.states.length > 0       && !filters.states.includes(item.state))     return false;
@@ -90,7 +89,6 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel, singl
 
 export default function TimesheetFilterBar({ data, filters, toggleFilter, setSingleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
   const options = useMemo(() => {
-    const projetos     = [...new Set(filterExcluding(data, filters, 'projetos').map((d) => d.projeto).filter(Boolean))].sort();
     const anos         = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
     const meses        = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
     const states       = [...new Set(filterExcluding(data, filters, 'states').map((d) => d.state).filter(Boolean))].sort();
@@ -98,7 +96,7 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, setSin
     const equipes      = [...new Set(filterExcluding(data, filters, 'equipes').map((d) => d.equipe || 'Sem Equipe'))].sort();
     const atividades   = [...new Set(filterExcluding(data, filters, 'atividades').map((d) => d.atividade || 'Sem Atividade'))].sort();
     const responsaveis = [...new Set(filterExcluding(data, filters, 'responsaveis').map((d) => d.assignedTo || 'Sem Analista'))].sort();
-    return { projetos, anos, meses, states, produtos, equipes, atividades, responsaveis };
+    return { anos, meses, states, produtos, equipes, atividades, responsaveis };
   }, [data, filters]);
 
   const hasAnyFilter = isActive || !!search.trim();
@@ -126,12 +124,6 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, setSin
           )}
         </div>
 
-        <FilterDropdown
-          label="Projeto"
-          options={options.projetos}
-          selected={filters.projetos}
-          onToggle={(v) => toggleFilter('projetos', v)}
-        />
         <FilterDropdown
           label="Produto"
           options={options.produtos}

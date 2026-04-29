@@ -48,10 +48,11 @@ const SVG_H    = PAD_TOP + BAR_H + COUNT_H + LABEL_H;
  */
 const COLOR_AUSENTE = '#f59e0b'; // amber — analista em férias/atestado/dayoff hoje
 
-export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [], tooltipData, ausentesHoje, onSelectKey, showMiniCards = true, formatValue = formatHoras }) {
-  const [tooltip, setTooltip]         = useState(null); // { key, total, x, y }
-  const [asc, setAsc]                 = useState(false);
-  const [selectedKey, setSelectedKey] = useState(null);
+export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [], tooltipData, ausentesHoje, onSelectKey, showMiniCards = true, formatValue = formatHoras, selectedKey: controlledKey }) {
+  const [tooltip, setTooltip]   = useState(null); // { key, total, x, y }
+  const [asc, setAsc]           = useState(false);
+  const [localKey, setLocalKey] = useState(null);
+  const selectedKey = controlledKey !== undefined ? controlledKey : localKey;
 
   const entries = [...data.entries()].sort(([, a], [, b]) =>
     asc ? a.total - b.total : b.total - a.total
@@ -74,11 +75,9 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
   });
 
   const handleBarClick = (key) => {
-    setSelectedKey((prev) => {
-      const next = prev === key ? null : key;
-      onSelectKey?.(next);
-      return next;
-    });
+    const next = selectedKey === key ? null : key;
+    if (controlledKey === undefined) setLocalKey(next);
+    onSelectKey?.(next);
   };
 
   // Compute mini-card values for selected analista
