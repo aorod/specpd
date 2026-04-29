@@ -35,21 +35,13 @@ export default function HorizontalBarChart({ data, forceCollapsed }) {
   );
 
   return (
-    <ChartCard title="Fluxo por Produto" icon={BarChart2} actions={sortButton} forceCollapsed={forceCollapsed}>
-      <div className="chart-legend-row">
-        <span className="chart-legend-dot" style={{ background: 'var(--color-normal)' }} />
-        <span className="chart-legend-text">Fluxo Normal</span>
-        <span className="chart-legend-dot" style={{ background: 'var(--color-er)' }} />
-        <span className="chart-legend-text">Eng. Reversa</span>
-      </div>
-
+    <ChartCard title="Casos de Uso por Produto" icon={BarChart2} actions={sortButton} forceCollapsed={forceCollapsed}>
       <div style={{ position: 'relative', overflowY: entries.length > VISIBLE_ROWS ? 'auto' : 'visible', aspectRatio: entries.length > VISIBLE_ROWS ? `${SVG_W} / ${SCROLL_H}` : undefined }}>
-        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Fluxo por Produto">
-          <title>Fluxo por Produto</title>
-          {entries.map(([produto, { total, fluxoNormal, fluxoER }], i) => {
+        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} aria-label="Barras horizontais — Casos de Uso por Produto">
+          <title>Casos de Uso por Produto</title>
+          {entries.map(([produto, { total }], i) => {
             const y = PAD + i * (ROW_H + ROW_GAP);
-            const normalW = (fluxoNormal / maxTotal) * BAR_AREA;
-            const erW = (fluxoER / maxTotal) * BAR_AREA;
+            const barW = (total / maxTotal) * BAR_AREA;
             const barX = LABEL_W + PAD;
 
             return (
@@ -64,39 +56,24 @@ export default function HorizontalBarChart({ data, forceCollapsed }) {
                   {produto.length > 19 ? produto.slice(0, 19) + '…' : produto}
                 </text>
 
-                {normalW > 0 && (
+                {barW > 0 && (
                   <rect
                     x={barX}
                     y={y}
-                    width={normalW}
+                    width={barW}
                     height={ROW_H}
                     rx={3}
-                    fill="var(--color-normal)"
-                    opacity={tooltip && tooltip.key !== `${produto}-n` ? 0.4 : 1}
+                    fill="var(--color-accent)"
+                    opacity={tooltip && tooltip.produto !== produto ? 0.4 : 1}
                     className="h-bar"
                     style={{ animationDelay: `${i * 40}ms` }}
-                    onMouseEnter={() => setTooltip({ key: `${produto}-n`, label: 'Fluxo Normal', value: fluxoNormal, produto })}
-                    onMouseLeave={() => setTooltip(null)}
-                  />
-                )}
-                {erW > 0 && (
-                  <rect
-                    x={barX + normalW}
-                    y={y}
-                    width={erW}
-                    height={ROW_H}
-                    rx={3}
-                    fill="var(--color-er)"
-                    opacity={tooltip && tooltip.key !== `${produto}-e` ? 0.4 : 1}
-                    className="h-bar"
-                    style={{ animationDelay: `${i * 40 + 20}ms` }}
-                    onMouseEnter={() => setTooltip({ key: `${produto}-e`, label: 'Eng. Reversa', value: fluxoER, produto })}
+                    onMouseEnter={() => setTooltip({ produto, total })}
                     onMouseLeave={() => setTooltip(null)}
                   />
                 )}
 
                 <text
-                  x={barX + normalW + erW + 6}
+                  x={barX + barW + 6}
                   y={y + ROW_H / 2 + 4}
                   fontSize={9.5}
                   fill="var(--color-text-muted)"
@@ -112,7 +89,7 @@ export default function HorizontalBarChart({ data, forceCollapsed }) {
         {tooltip && (
           <div className="chart-tooltip">
             <span className="chart-tooltip-label">{tooltip.produto}</span>
-            <span>{tooltip.label}: <strong>{tooltip.value}</strong></span>
+            <span>Total de UCs: <strong>{tooltip.total}</strong></span>
           </div>
         )}
       </div>
