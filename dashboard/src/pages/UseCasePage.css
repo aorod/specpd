@@ -56,6 +56,61 @@
   flex-wrap: wrap;
 }
 
+/* ─── Tab switcher ─────────────────────────────────────────────────────────── */
+.uc-tab-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.uc-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+  white-space: nowrap;
+}
+
+.uc-tab-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.uc-tab-btn.is-active {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ─── Embarcador badge na tabela ────────────────────────────────────────────── */
+.embarcador-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.embarcador-empty {
+  color: var(--color-text-muted);
+}
+
 /* Refresh button */
 .refresh-btn {
   display: flex;
@@ -264,6 +319,10 @@
 
 .metrics-grid--3 {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.metrics-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 @media (max-width: 1200px) {

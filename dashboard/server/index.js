@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
+import { requireAuth }       from './middleware/authMiddleware.js';
 import dayoffsRouter         from './routes/dayoffs.js';
 import feriasRouter          from './routes/ferias.js';
 import calendarRouter        from './routes/calendar.js';
@@ -39,9 +40,11 @@ app.use('/api/calendar',         calendarRouter);
 app.use('/api/workitems',        workitemsRouter);
 
 const ORG = 'Vector-Brasil';
-const PROJECT = 'Roadmap%202025';
-const BASE_URL = `https://analytics.dev.azure.com/${ORG}/${PROJECT}/_odata/v3.0-preview`;
-const ORG_BASE_URL = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
+const PROJECT_2025 = 'Roadmap%202025';
+const PROJECT_2026 = 'Roadmap%202026';
+const BASE_URL      = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2025}/_odata/v3.0-preview`;
+const BASE_URL_2026 = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2026}/_odata/v3.0-preview`;
+const ORG_BASE_URL  = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
 
 const MES_FIELD = 'Custom_ac3892be__002De47f__002D4103__002Da7a5__002D74b5b56ddb83';
 
@@ -50,6 +53,7 @@ const WI_SELECT = [
   'Custom_SubStatus', 'Custom_RequisitoSK', 'Custom_DesignerSK',
   'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
   'Custom_Atividade', 'Effort',
+  'Custom_Embarcador', 'Custom_Solicitante',
   MES_FIELD, 'AssignedToUserSK',
 ].join(',');
 
@@ -57,9 +61,10 @@ function authHeader(token) {
   return `Basic ${Buffer.from(`:${token}`).toString('base64')}`;
 }
 
-function transformItem(item, userMap) {
+function transformItem(item, userMap, projeto) {
   const mesRaw = item[MES_FIELD] || '';
   const monthPart = mesRaw ? String(mesRaw).split(' - ')[0].padStart(2, '0') : '';
+  const projetoAno = projeto ? (projeto.match(/\b(\d{4})\b/) || [])[1] ?? '' : '';
   return {
     id:           `${item.WorkItemType === 'Timesheet' ? 'TS' : 'UC'}-${item.WorkItemId}`,
     workItemType: item.WorkItemType,
@@ -69,13 +74,16 @@ function transformItem(item, userMap) {
     subStatus:    item.Custom_SubStatus || '',
     requisito:    userMap.get(item.Custom_RequisitoSK) || '',
     mes:          monthPart,
-    ano:          String(item.Custom_Ano || ''),
+    ano:          String(item.Custom_Ano || '') || projetoAno,
     designer:     userMap.get(item.Custom_DesignerSK) || '',
     produto:      item.Custom_ProdutoControladoria || '',
     tags:         item.TagNames || '',
     atividade:    item.Custom_Atividade || '',
     equipe:       item.Custom_Equipe || '',
     effort:       item.Effort ?? null,
+    embarcador:   item.Custom_Embarcador || '',
+    solicitante:  item.Custom_Solicitante || '',
+    projeto:      projeto || '',
   };
 }
 
@@ -110,15 +118,46 @@ async function fetchFromADO() {
   const usersRaw = await fetchAllPages(usersUrl, headers);
   const userMap = new Map(usersRaw.map((u) => [u.UserSK, u.UserName]));
 
-  const filterUC = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
-  const filterTS = encodeURIComponent("WorkItemType eq 'Timesheet'");
+  const filterUC      = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
+  const filterTS      = encodeURIComponent("WorkItemType eq 'Timesheet'");
+  const filterStories = encodeURIComponent("WorkItemType eq 'Stories'");
 
-  const [ucRaw, tsRaw] = await Promise.all([
+  const [ucRaw25, tsRaw25] = await Promise.all([
     fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterUC}&$select=${WI_SELECT}`, headers),
     fetchAllPages(`${BASE_URL}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
   ]);
 
-  const result = [...ucRaw, ...tsRaw].map((item) => transformItem(item, userMap));
+  let storiesRaw26 = [], tsRaw26 = [];
+  try {
+    [storiesRaw26, tsRaw26] = await Promise.all([
+      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT}`, headers),
+      fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT}`, headers),
+    ]);
+    console.log(`[Roadmap 2026] Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
+  } catch (err) {
+    console.warn('[Roadmap 2026] Fetch falhou, usando WI_SELECT reduzido:', err.message);
+    const WI_SELECT_2026 = [
+      'WorkItemId', 'WorkItemType', 'Title', 'State', 'TagNames',
+      'Custom_ProdutoControladoria', 'Custom_Equipe', 'Custom_Ano',
+      'Custom_Atividade', 'Effort', MES_FIELD, 'AssignedToUserSK',
+    ].join(',');
+    try {
+      [storiesRaw26, tsRaw26] = await Promise.all([
+        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterStories}&$select=${WI_SELECT_2026}`, headers),
+        fetchAllPages(`${BASE_URL_2026}/WorkItems?$filter=${filterTS}&$select=${WI_SELECT_2026}`, headers),
+      ]);
+      console.log(`[Roadmap 2026] Retry OK — Stories: ${storiesRaw26.length} | Timesheets: ${tsRaw26.length}`);
+    } catch (err2) {
+      console.error('[Roadmap 2026] Retry também falhou:', err2.message);
+    }
+  }
+
+  const from2025 = [...ucRaw25, ...tsRaw25].map((item) => transformItem(item, userMap, 'Roadmap 2025'));
+  const from2026 = [
+    ...storiesRaw26.map((item) => transformItem({ ...item, WorkItemType: 'Caso de Uso' }, userMap, 'Roadmap 2026')),
+    ...tsRaw26.map((item) => transformItem(item, userMap, 'Roadmap 2026')),
+  ];
+  const result = [...from2025, ...from2026];
   saveItems(result);
   logSync('success', result.length);
   return result;
@@ -275,6 +314,9 @@ app.post('/api/esteira-ed/sync', async (_req, res) => {
   }
 });
 
+// ── Rotas de diagnóstico — requerem autenticação ──────────────────────────────
+app.use('/api/debug', requireAuth);
+
 // ── GET /api/debug/ed-paths ───────────────────────────────────────────────────
 // Diagnóstico: inspeciona Custom_MonthWorked e Custom_YearWorked de todos os Issues do E&D.
 app.get('/api/debug/ed-paths', async (_req, res) => {
@@ -346,6 +388,106 @@ app.get('/api/debug/timesheet-fields', async (_req, res) => {
     const sample = raw[0];
     const fields = Object.keys(sample).map((key) => ({ field: key, value: sample[key] }));
     res.json({ totalFound: raw.length, sampleFields: fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/caso-de-uso-fields ────────────────────────────────────────
+// Diagnóstico: inspeciona todos os campos brutos de um Caso de Uso no ADO.
+app.get('/api/debug/caso-de-uso-fields', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+
+  try {
+    const filter = encodeURIComponent("WorkItemType eq 'Caso de Uso'");
+    const url = `${BASE_URL}/WorkItems?$filter=${filter}&$top=1`;
+    const raw = await fetchAllPages(url, headers);
+
+    if (!raw.length) return res.json({ message: 'Nenhum Caso de Uso encontrado', fields: [] });
+
+    const sample = raw[0];
+    const fields = Object.keys(sample).map((key) => ({ field: key, value: sample[key] }));
+    res.json({ totalFound: raw.length, sampleFields: fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/analytics-item/:id ────────────────────────────────────────
+// Diagnóstico: busca um work item específico na Analytics API e exibe todos os campos brutos.
+app.get('/api/debug/analytics-item/:id', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+  const wiId = Number(req.params.id);
+
+  try {
+    const filter = encodeURIComponent(`WorkItemId eq ${wiId}`);
+    const url = `${BASE_URL}/WorkItems?$filter=${filter}`;
+    const raw = await fetchAllPages(url, headers);
+
+    if (!raw.length) return res.json({ message: `Item ${wiId} não encontrado na Analytics API` });
+
+    const item = raw[0];
+    const fields = Object.entries(item).map(([key, value]) => ({ field: key, value }));
+    res.json({ workItemId: wiId, fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/debug/caso-de-uso-wi-fields/:id ─────────────────────────────────
+// Diagnóstico: busca um Caso de Uso via Work Items REST API e exibe todos os campos brutos.
+// Aceita um ID específico: /api/debug/caso-de-uso-wi-fields/35414
+app.get('/api/debug/caso-de-uso-wi-fields/:id?', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const headers = { Authorization: authHeader(token), Accept: 'application/json', 'Content-Type': 'application/json' };
+  const ORG_RAW = 'Vector-Brasil';
+  const PROJECT_RAW = 'Roadmap 2025';
+
+  try {
+    let wiId = req.params.id ? Number(req.params.id) : null;
+
+    if (!wiId) {
+      const wiqlUrl = `https://dev.azure.com/${ORG_RAW}/${encodeURIComponent(PROJECT_RAW)}/_apis/wit/wiql?api-version=7.1`;
+      const wiqlRes = await fetch(wiqlUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query: "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Caso de Uso' ORDER BY [System.Id] DESC" }),
+      });
+      const wiqlData = await wiqlRes.json();
+      wiId = wiqlData.workItems?.[0]?.id;
+      if (!wiId) return res.json({ message: 'Nenhum Caso de Uso encontrado' });
+    }
+
+    const wiUrl = `https://dev.azure.com/${ORG_RAW}/${encodeURIComponent(PROJECT_RAW)}/_apis/wit/workitems/${wiId}?$expand=fields&api-version=7.1`;
+    const wiRes = await fetch(wiUrl, { headers });
+    const wiData = await wiRes.json();
+
+    const fields = Object.entries(wiData.fields || {}).map(([key, value]) => ({ field: key, value }));
+    res.json({ workItemId: wiId, fields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/wit-types-2026 ───────────────────────────────────────────────────
+// Diagnóstico público: lista os WorkItemTypes distintos do projeto Roadmap 2026.
+app.get('/api/wit-types-2026', async (_req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado' });
+  const headers = { Authorization: authHeader(token), Accept: 'application/json' };
+  try {
+    const url = `${BASE_URL_2026}/WorkItems?$apply=groupby((WorkItemType))`;
+    const raw = await fetchAllPages(url, headers);
+    const types = raw.map((r) => r.WorkItemType).filter(Boolean).sort();
+    res.json({ types, total: types.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

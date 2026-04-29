@@ -35,7 +35,7 @@ export function useTimesheetData() {
         if (!res.ok) return res.json().then((b) => Promise.reject(new Error(b.error ?? `HTTP ${res.status}`)));
         return res.json();
       })
-      .then((all) => setData(all.filter((item) => item.workItemType === 'Timesheet')))
+      .then((all) => setData(all.filter((item) => item.workItemType === 'Timesheet' && item.projeto === 'Roadmap 2026')))
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err);
       })

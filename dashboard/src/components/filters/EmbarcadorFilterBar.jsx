@@ -1,33 +1,24 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, X, Search, Eye, EyeOff } from 'lucide-react';
 import { formatMesLabel } from '../../utils/formatters.js';
-import { aliasName } from '../../utils/nameAliases.js';
 import './FilterBar.css';
 
 function filterExcluding(data, filters, excludeKey) {
   return data.filter((item) => {
-    if (excludeKey !== 'projetos'     && filters.projetos.length > 0     && !filters.projetos.includes(item.projeto)) return false;
-    if (excludeKey !== 'anos'         && filters.anos.length > 0         && !filters.anos.includes(item.ano))         return false;
-    if (excludeKey !== 'meses'        && filters.meses.length > 0        && !filters.meses.includes(item.mes))        return false;
-    if (excludeKey !== 'states'       && filters.states.length > 0       && !filters.states.includes(item.state))     return false;
-    if (excludeKey !== 'produtos'     && filters.produtos.length > 0     && !filters.produtos.includes(item.produto)) return false;
-    if (excludeKey !== 'equipes'      && filters.equipes.length > 0) {
-      const val = item.equipe || 'Sem Equipe';
-      if (!filters.equipes.includes(val)) return false;
-    }
-    if (excludeKey !== 'atividades'   && filters.atividades.length > 0) {
-      const val = item.atividade || 'Sem Atividade';
-      if (!filters.atividades.includes(val)) return false;
-    }
-    if (excludeKey !== 'responsaveis' && filters.responsaveis.length > 0) {
-      const val = item.assignedTo || 'Sem Analista';
-      if (!filters.responsaveis.includes(val)) return false;
+    if (excludeKey !== 'anos'        && filters.anos.length > 0        && !filters.anos.includes(item.ano)) return false;
+    if (excludeKey !== 'meses'       && filters.meses.length > 0       && !filters.meses.includes(item.mes)) return false;
+    if (excludeKey !== 'states'      && filters.states.length > 0      && !filters.states.includes(item.state)) return false;
+    if (excludeKey !== 'subStatuses' && filters.subStatuses.length > 0 && !filters.subStatuses.includes(item.subStatus)) return false;
+    if (excludeKey !== 'produtos'    && filters.produtos.length > 0    && !filters.produtos.includes(item.produto)) return false;
+    if (excludeKey !== 'embarcadores' && filters.embarcadores.length > 0) {
+      const val = item.embarcador || 'Sem Embarcador';
+      if (!filters.embarcadores.includes(val)) return false;
     }
     return true;
   });
 }
 
-function FilterDropdown({ label, options, selected, onToggle, formatLabel, single = false }) {
+function FilterDropdown({ label, options, selected, onToggle, formatLabel }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -38,11 +29,6 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel, singl
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  function handleOption(opt) {
-    onToggle(opt);
-    if (single) setOpen(false); // fecha após escolha no modo single
-  }
 
   return (
     <div className="filter-dropdown" ref={ref}>
@@ -69,11 +55,11 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel, singl
               <button
                 key={opt}
                 className={`filter-option${checked ? ' is-checked' : ''}`}
-                onClick={() => handleOption(opt)}
-                role={single ? 'radio' : 'checkbox'}
+                onClick={() => onToggle(opt)}
+                role="checkbox"
                 aria-checked={checked}
               >
-                <span className={`filter-option-box${single ? ' filter-option-box--radio' : ''}`}>
+                <span className="filter-option-box">
                   {checked && <Check size={9} strokeWidth={3} />}
                 </span>
                 <span className="filter-option-label">
@@ -88,17 +74,15 @@ function FilterDropdown({ label, options, selected, onToggle, formatLabel, singl
   );
 }
 
-export default function TimesheetFilterBar({ data, filters, toggleFilter, setSingleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
+export default function EmbarcadorFilterBar({ data, filters, toggleFilter, clearFilters, isActive, search, onSearchChange, chartsCollapsed, onToggleCharts }) {
   const options = useMemo(() => {
-    const projetos     = [...new Set(filterExcluding(data, filters, 'projetos').map((d) => d.projeto).filter(Boolean))].sort();
-    const anos         = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
-    const meses        = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
-    const states       = [...new Set(filterExcluding(data, filters, 'states').map((d) => d.state).filter(Boolean))].sort();
-    const produtos     = [...new Set(filterExcluding(data, filters, 'produtos').map((d) => d.produto).filter(Boolean))].sort();
-    const equipes      = [...new Set(filterExcluding(data, filters, 'equipes').map((d) => d.equipe || 'Sem Equipe'))].sort();
-    const atividades   = [...new Set(filterExcluding(data, filters, 'atividades').map((d) => d.atividade || 'Sem Atividade'))].sort();
-    const responsaveis = [...new Set(filterExcluding(data, filters, 'responsaveis').map((d) => d.assignedTo || 'Sem Analista'))].sort();
-    return { projetos, anos, meses, states, produtos, equipes, atividades, responsaveis };
+    const anos = [...new Set(filterExcluding(data, filters, 'anos').map((d) => d.ano).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+    const meses = [...new Set(filterExcluding(data, filters, 'meses').map((d) => d.mes).filter(Boolean))].sort();
+    const states = [...new Set(filterExcluding(data, filters, 'states').map((d) => d.state).filter(Boolean))].sort();
+    const subStatuses = [...new Set(filterExcluding(data, filters, 'subStatuses').map((d) => d.subStatus).filter(Boolean))].sort();
+    const produtos = [...new Set(filterExcluding(data, filters, 'produtos').map((d) => d.produto).filter(Boolean))].sort();
+    const embarcadores = [...new Set(filterExcluding(data, filters, 'embarcadores').map((d) => d.embarcador || 'Sem Embarcador'))].sort();
+    return { anos, meses, states, subStatuses, produtos, embarcadores };
   }, [data, filters]);
 
   const hasAnyFilter = isActive || !!search.trim();
@@ -127,12 +111,6 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, setSin
         </div>
 
         <FilterDropdown
-          label="Projeto"
-          options={options.projetos}
-          selected={filters.projetos}
-          onToggle={(v) => toggleFilter('projetos', v)}
-        />
-        <FilterDropdown
           label="Produto"
           options={options.produtos}
           selected={filters.produtos}
@@ -145,31 +123,23 @@ export default function TimesheetFilterBar({ data, filters, toggleFilter, setSin
           onToggle={(v) => toggleFilter('states', v)}
         />
         <FilterDropdown
-          label="Atividade"
-          options={options.atividades}
-          selected={filters.atividades}
-          onToggle={(v) => toggleFilter('atividades', v)}
-        />
-        <FilterDropdown
-          label="Equipe"
-          options={options.equipes}
-          selected={filters.equipes}
-          onToggle={(v) => toggleFilter('equipes', v)}
-        />
-        <FilterDropdown
-          label="Analistas"
-          options={options.responsaveis}
-          selected={filters.responsaveis}
-          onToggle={(v) => toggleFilter('responsaveis', v)}
-          formatLabel={aliasName}
+          label="Sub Status"
+          options={options.subStatuses}
+          selected={filters.subStatuses}
+          onToggle={(v) => toggleFilter('subStatuses', v)}
         />
         <FilterDropdown
           label="Mês"
           options={options.meses}
           selected={filters.meses}
-          onToggle={(v) => setSingleFilter('meses', v)}
+          onToggle={(v) => toggleFilter('meses', v)}
           formatLabel={formatMesLabel}
-          single
+        />
+        <FilterDropdown
+          label="Embarcador"
+          options={options.embarcadores}
+          selected={filters.embarcadores}
+          onToggle={(v) => toggleFilter('embarcadores', v)}
         />
         <FilterDropdown
           label="Ano"

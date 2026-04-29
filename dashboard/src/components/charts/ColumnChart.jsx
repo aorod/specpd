@@ -48,7 +48,7 @@ const SVG_H    = PAD_TOP + BAR_H + COUNT_H + LABEL_H;
  */
 const COLOR_AUSENTE = '#f59e0b'; // amber — analista em férias/atestado/dayoff hoje
 
-export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [], tooltipData, ausentesHoje, onSelectKey }) {
+export default function ColumnChart({ data, forceCollapsed, title = 'Designer', tooltipLabel = 'Total', perColumnLines = [], tooltipData, ausentesHoje, onSelectKey, showMiniCards = true, formatValue = formatHoras }) {
   const [tooltip, setTooltip]         = useState(null); // { key, total, x, y }
   const [asc, setAsc]                 = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
@@ -269,7 +269,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
                 {/* Valor realizado acima da barra */}
                 {(() => {
                   const labelY    = barY - 3;
-                  const labelText = formatHoras(total);
+                  const labelText = formatValue(total);
                   const isNear    = perColumnLines.some((_, li) => {
                     const refY = refLinePositions[li]?.[i];
                     return refY != null && Math.abs(labelY - (refY - 5)) < 14;
@@ -370,7 +370,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
       </div>
 
       {/* Mini cards — shown when an analista bar is clicked */}
-      <div style={{
+      {showMiniCards && <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gap: 10,
@@ -414,7 +414,7 @@ export default function ColumnChart({ data, forceCollapsed, title = 'Designer', 
             )}
           </div>
         ))}
-      </div>
+      </div>}
     </ChartCard>
   );
 }

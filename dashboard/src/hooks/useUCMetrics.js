@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { classifyFluxo, FLUXO_ER, FLUXO_NORMAL } from '../utils/classifyFluxo.js';
 
+const STATUS_NAO_INICIADO = new Set(['Não Iniciado', 'To Do', 'Stand By Interno', 'Devolvido', 'Removido/Rejeitado']);
+const STATUS_EM_ANDAMENTO = new Set(['Construindo', 'Desenvolvimento', 'Testando']);
+const STATUS_FINALIZADO   = new Set(['Done', 'Pronto pra Deploy']);
+
 /**
  * Calcula todas as métricas derivadas do array filtrado de UCs.
  * @param {Array} filteredData
@@ -12,6 +16,9 @@ export function useUCMetrics(filteredData) {
     let fluxoNormal = 0;
     let comRequisito = 0;
     let semRequisito = 0;
+    let naoIniciados = 0;
+    let emAndamento = 0;
+    let finalizados = 0;
     const porDesignerMap = new Map();
     const porProdutoMap = new Map();
     const porMesMap = new Map();
@@ -20,12 +27,17 @@ export function useUCMetrics(filteredData) {
     for (const item of filteredData) {
       const fluxo = classifyFluxo(item);
       const hasReq = !!(item.requisito && item.requisito.trim());
+      const state = item.state || '';
 
       if (fluxo === FLUXO_ER) fluxoER++;
       else fluxoNormal++;
 
       if (hasReq) comRequisito++;
       else semRequisito++;
+
+      if (STATUS_NAO_INICIADO.has(state))      naoIniciados++;
+      else if (STATUS_EM_ANDAMENTO.has(state)) emAndamento++;
+      else if (STATUS_FINALIZADO.has(state))   finalizados++;
 
       // porDesigner
       if (!porDesignerMap.has(item.designer)) {
@@ -37,10 +49,11 @@ export function useUCMetrics(filteredData) {
       else d.semRequisito++;
 
       // porProduto
-      if (!porProdutoMap.has(item.produto)) {
-        porProdutoMap.set(item.produto, { total: 0, fluxoNormal: 0, fluxoER: 0 });
+      const produtoKey = item.produto || 'Sem Produto';
+      if (!porProdutoMap.has(produtoKey)) {
+        porProdutoMap.set(produtoKey, { total: 0, fluxoNormal: 0, fluxoER: 0 });
       }
-      const p = porProdutoMap.get(item.produto);
+      const p = porProdutoMap.get(produtoKey);
       p.total++;
       if (fluxo === FLUXO_NORMAL) p.fluxoNormal++;
       else p.fluxoER++;
@@ -78,6 +91,9 @@ export function useUCMetrics(filteredData) {
       fluxoNormal,
       pctER,
       pctNormal,
+      naoIniciados,
+      emAndamento,
+      finalizados,
       comRequisito,
       semRequisito,
       porDesigner: porDesignerMap,

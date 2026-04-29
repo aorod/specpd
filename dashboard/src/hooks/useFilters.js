@@ -23,7 +23,10 @@ export function useFilters(data) {
       if (filters.meses.length > 0 && !filters.meses.includes(item.mes)) return false;
       if (filters.states.length > 0 && !filters.states.includes(item.state)) return false;
       if (filters.subStatuses.length > 0 && !filters.subStatuses.includes(item.subStatus)) return false;
-      if (filters.produtos.length > 0 && !filters.produtos.includes(item.produto)) return false;
+      if (filters.produtos.length > 0) {
+        const val = item.produto || 'Sem Produto';
+        if (!filters.produtos.includes(val)) return false;
+      }
       if (filters.requisitos.length > 0) {
         const val = !item.requisito ? 'Sem Requisito' : item.requisito === 'linked' ? 'Com Requisito' : item.requisito;
         if (!filters.requisitos.includes(val)) return false;
@@ -48,8 +51,12 @@ export function useFilters(data) {
 
   const clearFilters = () => setFilters(INITIAL_FILTERS);
 
+  const setFilter = (key, values) => {
+    setFilters((prev) => ({ ...prev, [key]: values }));
+  };
+
   const isActive = Object.values(filters).some((arr) => arr.length > 0);
   const activeCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
 
-  return { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount };
+  return { filters, filteredData, toggleFilter, setFilter, clearFilters, isActive, activeCount };
 }
