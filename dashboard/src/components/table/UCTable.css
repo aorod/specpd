@@ -201,6 +201,13 @@
 .state-badge--devolvidos         { background: rgba(249, 115, 22, 0.12);  color: #fb923c; }
 .state-badge--removido           { background: rgba(75, 85, 99, 0.10);    color: #6b7280; }
 
+/* Novos status com cores distintas */
+.state-badge--devolvido          { background: rgba(244, 63, 94, 0.12);   color: #f43f5e; }
+.state-badge--done               { background: rgba(16, 185, 129, 0.12);  color: #10b981; }
+.state-badge--pronto-pra-deploy  { background: rgba(132, 204, 22, 0.12);  color: #84cc16; }
+.state-badge--removido-rejeitado { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.state-badge--to-do              { background: rgba(129, 140, 248, 0.12); color: #818cf8; }
+
 /* Fluxo badges */
 .fluxo-badge {
   display: inline-block;

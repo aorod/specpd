@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Layers, AlertTriangle, FileCheck, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon, Package, Truck, Users } from 'lucide-react';
+import { Layers, PauseCircle, Activity, CheckCircle2, RefreshCw, AlertCircle, RotateCcw, SlidersHorizontal, Sun, Moon, Package, Truck, Users } from 'lucide-react';
 import { useUCData } from '../hooks/useUCData.js';
 import { useFilters } from '../hooks/useFilters.js';
 import { useUCMetrics } from '../hooks/useUCMetrics.js';
@@ -8,12 +8,9 @@ import { useEmbarcadorMetrics } from '../hooks/useEmbarcadorMetrics.js';
 import MetricCard from '../components/cards/MetricCard.jsx';
 import FilterBar from '../components/filters/FilterBar.jsx';
 import EmbarcadorFilterBar from '../components/filters/EmbarcadorFilterBar.jsx';
-import DonutChart from '../components/charts/DonutChart.jsx';
-import HorizontalBarChart from '../components/charts/HorizontalBarChart.jsx';
 import VerticalBarChart from '../components/charts/VerticalBarChart.jsx';
 import ColumnChart from '../components/charts/ColumnChart.jsx';
 import RequisitoChart from '../components/charts/RequisitoChart.jsx';
-import LineChart from '../components/charts/LineChart.jsx';
 import UCTable from '../components/table/UCTable.jsx';
 import EmbarcadorTable from '../components/table/EmbarcadorTable.jsx';
 import ProfileMenu from '../components/profile/ProfileMenu.jsx';
@@ -26,7 +23,7 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, o
   const [activeTab, setActiveTab] = useState('produto'); // 'produto' | 'embarcador'
 
   // ─── Aba PRODUTO ──────────────────────────────────────────────────────────
-  const { filters, filteredData, toggleFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
+  const { filters, filteredData, toggleFilter, setFilter, clearFilters, isActive, activeCount } = useFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [pinnedCards, setPinnedCards] = useState([]);
@@ -44,9 +41,10 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, o
     setPinnedCards((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
 
   const cardDefs = [
-    { id: 'total',  icon: Layers,        label: 'Total de Caso de Uso', value: metrics.totalUCs,    detail: null,                             accent: 'neutral' },
-    { id: 'normal', icon: FileCheck,     label: 'Fluxo Normal',         value: metrics.fluxoNormal, detail: `${metrics.pctNormal}% do total`, accent: 'success' },
-    { id: 'er',     icon: AlertTriangle, label: 'Engenharia Reversa',   value: metrics.fluxoER,     detail: `${metrics.pctER}% do total`,     accent: 'er'      },
+    { id: 'total',          icon: Layers,        label: 'Total de Casos de Uso',      value: metrics.totalUCs,      detail: null,                                                                accent: 'neutral' },
+    { id: 'nao-iniciados',  icon: PauseCircle,   label: 'Não Iniciados / Pausados',   value: metrics.naoIniciados,  detail: metrics.totalUCs > 0 ? `${((metrics.naoIniciados / metrics.totalUCs) * 100).toFixed(1)}% do total` : null, accent: 'warning' },
+    { id: 'em-andamento',   icon: Activity,      label: 'Em Andamento',               value: metrics.emAndamento,   detail: metrics.totalUCs > 0 ? `${((metrics.emAndamento  / metrics.totalUCs) * 100).toFixed(1)}% do total` : null, accent: 'info'    },
+    { id: 'finalizados',    icon: CheckCircle2,  label: 'Finalizados',                value: metrics.finalizados,   detail: metrics.totalUCs > 0 ? `${((metrics.finalizados  / metrics.totalUCs) * 100).toFixed(1)}% do total` : null, accent: 'success' },
   ];
 
   const pinnedDefs   = cardDefs.filter((c) => pinnedCards.includes(c.id));
@@ -268,7 +266,7 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, o
       {!loading && !error && activeTab === 'produto' && (
         <main className="dashboard-main">
           {unpinnedDefs.length > 0 && (
-            <section className="metrics-grid metrics-grid--3" aria-label="Métricas principais">
+            <section className="metrics-grid metrics-grid--4" aria-label="Métricas principais">
               {unpinnedDefs.map((card) => (
                 <MetricCard
                   key={card.id}
@@ -285,10 +283,17 @@ export default function UseCasePage({ theme, setTheme, menuOpen, onMenuToggle, o
           )}
 
           <section className="charts-grid" aria-label="Gráficos">
-            <DonutChart normal={metrics.fluxoNormal} er={metrics.fluxoER} forceCollapsed={chartsCollapsed} />
-            <HorizontalBarChart data={metrics.porProduto} forceCollapsed={chartsCollapsed} />
             <div style={{ gridColumn: '1 / -1' }}>
-              <LineChart data={metrics.porMes} anos={filters.anos} dotRadius={2.5} forceCollapsed={chartsCollapsed} />
+              <ColumnChart
+                data={metrics.porProduto}
+                title="Casos de Uso por Produto"
+                tooltipLabel="Total de UCs"
+                forceCollapsed={chartsCollapsed}
+                showMiniCards={false}
+                formatValue={(v) => String(Math.round(v))}
+                selectedKey={filters.produtos.length === 1 ? filters.produtos[0] : null}
+                onSelectKey={(produto) => setFilter('produtos', produto ? [produto] : [])}
+              />
             </div>
             <VerticalBarChart data={metrics.porDesigner} forceCollapsed={chartsCollapsed} />
             <RequisitoChart data={metrics.porRequisito} forceCollapsed={chartsCollapsed} />

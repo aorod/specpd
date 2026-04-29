@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
-import { classifyFluxo, FLUXO_NORMAL } from '../../utils/classifyFluxo.js';
 import { formatMesLabel } from '../../utils/formatters.js';
 import { aliasName } from '../../utils/nameAliases.js';
 import { useSort } from '../../hooks/useSort.js';
@@ -17,9 +16,8 @@ const SORTABLE_COLS = [
   { key: 'ano',           label: 'Ano'           },
   { key: 'designer',      label: 'Designer'      },
   { key: 'requisito',     label: 'Requisito'     },
-  { key: 'state',         label: 'Status'        },
-  { key: 'subStatus',     label: 'Sub Status'    },
-  { key: 'classificacao', label: 'Classificação' },
+  { key: 'state',     label: 'Status'     },
+  { key: 'subStatus', label: 'Sub Status' },
 ];
 
 const TOTAL_COLS = 2 + SORTABLE_COLS.length; // ID + Título + sortable
@@ -110,8 +108,6 @@ export default function UCTable({ data }) {
               </tr>
             ) : (
               pageItems.map((item, idx) => {
-                const fluxo = classifyFluxo(item);
-                const isNormal = fluxo === FLUXO_NORMAL;
                 const idNum = item.id.replace(/\D/g, '');
                 return (
                   <tr key={item.id} className="uc-table-row" style={{ animationDelay: `${idx * 12}ms` }}>
@@ -130,16 +126,11 @@ export default function UCTable({ data }) {
                     <td>{aliasName(item.designer)}</td>
                     <td>{aliasName(item.requisito)}</td>
                     <td>
-                      <span className={`state-badge state-badge--${item.state.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <span className={`state-badge state-badge--${item.state.toLowerCase().replace(/\s+/g, '-').replace(/\//g, '-')}`}>
                         {item.state}
                       </span>
                     </td>
                     <td>{item.subStatus}</td>
-                    <td>
-                      <span className={`fluxo-badge fluxo-badge--${isNormal ? 'normal' : 'er'}`}>
-                        {isNormal ? 'Fluxo Normal' : 'Eng. Reversa'}
-                      </span>
-                    </td>
                   </tr>
                 );
               })
