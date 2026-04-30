@@ -5,7 +5,8 @@ import { getUserByEmail } from '../db.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'specpd-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET não está definido no .env');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {

@@ -39,8 +39,9 @@ app.use('/api/ferias',           feriasRouter);
 app.use('/api/calendar',         calendarRouter);
 app.use('/api/workitems',        workitemsRouter);
 
-const ORG = 'Vector-Brasil';
-const PROJECT_2026 = 'Roadmap%202026';
+const ORG = process.env.ADO_ORG;
+const PROJECT_2026 = process.env.ADO_PROJECT_2026;
+const ED_PROJECT_ENV = process.env.ADO_PROJECT_ED;
 const BASE_URL_2026 = `https://analytics.dev.azure.com/${ORG}/${PROJECT_2026}/_odata/v3.0-preview`;
 const ORG_BASE_URL  = `https://analytics.dev.azure.com/${ORG}/_odata/v3.0-preview`;
 
@@ -179,7 +180,7 @@ app.get('/api/cache/status', (_req, res) => {
 });
 
 // ── Esteira E&D (Especificações e Design) ─────────────────────────────────────
-const ED_PROJECT  = 'Especifica%C3%A7%C3%B5es%20e%20Design';
+const ED_PROJECT  = ED_PROJECT_ENV;
 const ED_BASE_URL = `https://analytics.dev.azure.com/${ORG}/${ED_PROJECT}/_odata/v3.0-preview`;
 
 const ED_SELECT = [
@@ -418,8 +419,8 @@ app.get('/api/debug/caso-de-uso-wi-fields/:id?', async (req, res) => {
   if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
 
   const headers = { Authorization: authHeader(token), Accept: 'application/json', 'Content-Type': 'application/json' };
-  const ORG_RAW = 'Vector-Brasil';
-  const PROJECT_RAW = 'Roadmap 2026';
+  const ORG_RAW = process.env.ADO_ORG;
+  const PROJECT_RAW = decodeURIComponent(process.env.ADO_PROJECT_2026 || '');
 
   try {
     let wiId = req.params.id ? Number(req.params.id) : null;

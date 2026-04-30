@@ -1,6 +1,6 @@
 ================================================================================
 RESUMO TECNICO — SpecPD
-Gerado em: 2026-04-24
+Gerado em: 2026-04-30
 ================================================================================
 
 ESTRUTURA DO PROJETO
@@ -9,9 +9,18 @@ Monorepo com separação frontend/backend dentro de /dashboard.
 
   specpd/
   ├── dashboard/
-  │   ├── src/          → Frontend React (components, pages, context, api, hooks, utils)
-  │   ├── server/       → Backend Express (routes, db.js, middleware)
-  │   └── dist/         → Build gerado pelo Vite
+  │   ├── src/
+  │   │   ├── components/   → Componentes reutilizáveis (analytics, cards, charts,
+  │   │   │                    filters, table, sidebar, profile, datepicker)
+  │   │   ├── pages/        → Páginas completas da aplicação
+  │   │   ├── context/      → AuthContext (auth global e permissões)
+  │   │   ├── hooks/        → Custom hooks de dados e negócio
+  │   │   ├── api/          → Clientes HTTP (authClient, analyticsClient, localClient)
+  │   │   ├── utils/        → Utilitários (permissions, formatters, classifyFluxo, etc.)
+  │   │   ├── constants/    → Constantes e configurações
+  │   │   └── data/         → Dados de seed/mock
+  │   ├── server/           → Backend Express (routes, db.js, middleware)
+  │   └── dist/             → Build gerado pelo Vite
   ├── docker-compose.yml
   └── docker-compose.prod.yml
 
@@ -31,6 +40,31 @@ PDF       : pdfjs-dist 5.6.205
 Excel     : xlsx 0.18.5
 Estado    : React Context (AuthContext) — sem Redux ou Zustand
 
+Páginas implementadas:
+  HomePage.jsx          → Dashboard principal com métricas
+  AnalyticsPage.jsx     → Análises e gráficos estratégicos
+  UseCasePage.jsx       → Acompanhamento de Casos de Uso (ADO)
+  TimesheetPage.jsx     → Gestão de registros de timesheet
+  EsteiraEDPage.jsx     → Pipeline Esteira E&D (Kanban-like)
+  FeriasPage.jsx        → Solicitação e gestão de férias
+  DayOffPage.jsx        → Gestão de abonos e day-offs
+  CalendarPage.jsx      → Calendário corporativo
+  ConfiguracoesPage.jsx → Configurações do sistema
+  ProfilePage.jsx       → Perfil do usuário (avatar base64)
+  LoginPage.jsx         → Autenticação
+
+Hooks principais:
+  useAnalyticsMetrics   → Métricas do módulo Analytics
+  useUCData             → Dados de Casos de Uso
+  useTimesheetData      → Dados de Timesheet
+  useInsightsHistory    → Histórico e linha do tempo estratégica
+  useEmbarcadorMetrics  → Métricas por embarcador
+  useEsteiraEDData      → Dados da Esteira E&D
+  useWorkdaysCalc       → Cálculo de dias úteis
+  useFerias             → Gestão de férias
+  useDayOffs            → Gestão de abonos
+  useFilters / useSort  → Filtros e ordenação genéricos
+
 BACKEND
 -------
 Runtime   : Node.js >= 18
@@ -42,34 +76,59 @@ Env vars  : dotenv 16.4.0
 
 BANCO DE DADOS
 --------------
-Tecnologia  : SQLite (arquivo data.db)
+Tecnologia  : SQLite (arquivo server/data.db)
 ORM         : Nenhum — SQL puro com prepared statements
-WAL mode    : Habilitado para concorrência
+WAL mode    : Habilitado para concorrência leitura/escrita
 Cache TTL   : 30 minutos (configurável via env CACHE_TTL_MINUTES)
+Migrações   : ALTER TABLE in-app no startup (sem ferramenta externa)
 
 Tabelas:
-  work_items       → Work items sincronizados do Azure DevOps
-  sync_log         → Controle de cache e última sincronização
-  users            → Usuários, credenciais e roles
-  user_preferences → Preferências de colunas por usuário
-  ferias           → Registros de férias
-  day_offs         → Registros de abonos
-  calendar_events  → Eventos do calendário corporativo
+  work_items        → Work items sincronizados do Azure DevOps (14 campos + metadados)
+  sync_log          → Controle de cache TTL e timestamp da última sincronização
+  users             → Usuários, senha_hash (bcrypt), papel, ativo, criado_em
+  user_preferences  → Preferências de colunas visíveis por usuário
+  ferias            → Registros de férias (status: Em Aprovação → Aprovado/Rejeitado,
+                       venda_ferias, antecipar_13)
+  day_offs          → Abonos e compensações (tipo_abono, intervalo de datas)
+  calendar_events   → Eventos corporativos (feriado, ponto facultativo, etc.)
 
 INTEGRAÇÃO EXTERNA
 ------------------
-API     : Azure DevOps Analytics (OData v3.0-preview)
-Projetos: "Roadmap 2025" e "Especificações e Design"
-Paginação via @odata.nextLink
+API      : Azure DevOps Analytics (OData v3.0-preview)
+Projetos : "Roadmap 2026" e "Especificações e Design"
+Paginação: via @odata.nextLink (multi-página)
 
-AUTENTICAÇÃO
-------------
+Mapeamento de campos:
+  ADO usa UUIDs longos para campos customizados (ex.: Custom_ac3892be__002De47f__...)
+  Função transformItem() normaliza o schema ADO para o schema da app
+  Work item types: Timesheet (prefixo TS) vs. Story/Caso de Uso (prefixo UC)
+
+Fallback de cache:
+  Se a API ADO falhar, retorna dados do cache com header X-Cache: stale
+
+AUTENTICAÇÃO E PERMISSÕES
+--------------------------
 Modelo   : JWT stateless
 Expiração: 8 horas
 Storage  : localStorage (cliente)
 Header   : Authorization: Bearer <token>
-Roles    : admin / viewer / viewer-read
-Middleware: requireAuth (todas as rotas), requireAdmin (rotas admin)
+
+Roles (4 níveis):
+  admin        → Acesso total, gestão de usuários
+  gestor       → Visão gerencial, aprovação de férias
+  coordenador  → Coordenação de equipes e entregas
+  analista     → Acesso padrão às funcionalidades da equipe
+
+Permissões:
+  Defaults por role definidos em utils/permissions.js (PERMISSOES_PERFIL)
+  Override individual por usuário armazenado em localStorage
+  Enforcement por página em App.jsx (PAGE_PERMISSIONS)
+  Exemplos de ações: dashboard.acessar, dashboard.analytics, dashboard.esteira_ed,
+                     dashboard.exportar, ferias.aprovar, usuarios.gerenciar
+
+Middleware:
+  requireAuth    → Valida JWT em todas as rotas protegidas
+  requireAdmin   → Restringe rotas de gestão de usuários ao role admin
 
 API REST
 --------
@@ -77,17 +136,17 @@ Estilo  : REST — JSON puro, sem GraphQL
 Proxy   : Vite encaminha /api/* para Express (porta 3001)
 
 Endpoints principais:
-  POST /api/auth/login            → Login
-  GET  /api/auth/me               → Validação do token atual
-  GET  /api/analytics             → Work items (cache ou ADO)
-  POST /api/sync                  → Força sync imediato com ADO
-  GET  /api/cache/status          → Saúde do cache
-  GET|POST /api/users/*           → Gestão de usuários (admin)
-  GET|POST /api/ferias/*          → Gestão de férias
-  GET|POST /api/dayoffs/*         → Gestão de abonos
-  GET|POST /api/calendar/*        → Eventos de calendário
-  GET|POST /api/workitems/*       → CRUD de work items
-  GET|POST /api/user-preferences/* → Preferências de colunas
+  POST /api/auth/login               → Login
+  GET  /api/auth/me                  → Validação do token atual
+  GET  /api/analytics                → Work items (cache ou ADO)
+  POST /api/sync                     → Força sync imediato com ADO
+  GET  /api/cache/status             → Saúde do cache
+  GET|POST /api/users/*              → Gestão de usuários (admin)
+  GET|POST /api/ferias/*             → Gestão de férias
+  GET|POST /api/dayoffs/*            → Gestão de abonos
+  GET|POST /api/calendar/*           → Eventos de calendário
+  GET|POST /api/workitems/*          → CRUD de work items
+  GET|POST /api/user-preferences/*   → Preferências de colunas
 
 TOOLING DE DESENVOLVIMENTO
 --------------------------
@@ -106,7 +165,38 @@ Sem CI/CD pipeline
 AMBIENTES
 ---------
 Desenvolvimento : docker-compose.yml          (porta 5173 frontend / 3001 backend)
-Produção        : docker-compose.prod.yml     (multi-stage build, container único)
-Node volumes    : isolados para compatibilidade com bind mounts no Windows
+Produção        : docker-compose.prod.yml     (multi-stage build, container único —
+                                               Express serve frontend estático + API)
+Node volumes    : isolados (backend_modules, frontend_modules) para compatibilidade
+                  com bind mounts no Windows
+
+FUNCIONALIDADES PRINCIPAIS
+--------------------------
+Analytics & Insights
+  - Sincronização em tempo real com Azure DevOps Analytics
+  - Aba Insights Estratégicos: linha do tempo histórica, análise de fluxo e tendências
+  - Gráficos: Donut, Column, Line, HorizontalBar, VerticalBar, Requisito
+
+Casos de Uso
+  - Tracking de Stories do ADO com filtros por projeto, equipe, produto, analista
+  - Abas: Embarcador e Solicitante
+  - Totalizadores e distribuição de status em tempo real
+
+Timesheet
+  - Criação e edição de registros vinculados ao Roadmap 2026
+  - Filtros por projeto, analista, equipe, horas de esforço
+  - Exportação para Excel e PDF
+
+Esteira E&D (Pipeline)
+  - Workflow em 6+ colunas: Backlog, Pausado, Descobrir/Definir,
+    Desenvolver/Entregar, Review/Refinamento, Squad
+  - Campos customizados: FocalDesign, FocalRequisito, PDApoio1/2,
+    REQApoio1, FocusSquad, data de entrega
+
+Gestão de Pessoas
+  - Férias: solicitação com fluxo de aprovação (Em Aprovação → Aprovado/Rejeitado)
+  - Day-offs/Abonos: tipos variados com intervalo de datas
+  - Calendário corporativo com feriados e pontos facultativos
+  - Cálculo de dias úteis integrado
 
 ================================================================================

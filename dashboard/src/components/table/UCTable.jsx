@@ -7,7 +7,7 @@ import './UCTable.css';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 const MAX_PAGE_BTNS = 10;
-const ADO_BASE = 'https://dev.azure.com/Vector-Brasil/Roadmap%202025/_workitems/edit/';
+const ADO_BASE = 'https://dev.azure.com/Vector-Brasil/Roadmap%202026/_workitems/edit/';
 
 const SORTABLE_COLS = [
   { key: 'produto',       label: 'Produto'       },

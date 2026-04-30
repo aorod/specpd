@@ -1,6 +1,6 @@
 # SpecPD — Dashboard de Gestão e Analytics
 
-Dashboard interno da **Vector Brasil** para visualização de dados do Azure DevOps, gestão de equipe e acompanhamento de projetos.
+Dashboard interno da **Rotcev Lisarb** para visualização de dados do Azure DevOps, gestão de equipe e acompanhamento de projetos.
 
 ---
 
