@@ -20,7 +20,7 @@ router.post('/timesheet', async (req, res) => {
   const token = process.env.ADO_TOKEN;
   if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
 
-  const { titulo, analista, mes, ano, equipe, produto, atividade, horas, state } = req.body;
+  const { titulo, analista, mes, ano, equipe, produto, atividade, horas, state, ucId } = req.body;
 
   if (!titulo?.trim()) {
     return res.status(400).json({ error: 'Título é obrigatório' });
@@ -79,10 +79,44 @@ router.post('/timesheet', async (req, res) => {
       return res.status(adoRes.status).json({ error: msg });
     }
 
+    const timesheetId = adoData.id;
     const htmlUrl = adoData?._links?.html?.href
-      ?? `https://dev.azure.com/${ORG}/${PROJECT}/_workitems/edit/${adoData?.id}`;
+      ?? `https://dev.azure.com/${ORG}/${PROJECT}/_workitems/edit/${timesheetId}`;
 
-    res.status(201).json({ id: adoData.id, url: htmlUrl });
+    // Vincula o Timesheet como filho do UC: PATCH no UC (pai) com Hierarchy-Forward
+    let linkError = null;
+    if (ucId) {
+      const ucNumId = Number(String(ucId).replace(/\D/g, ''));
+      if (ucNumId) {
+        try {
+          const linkRes = await fetch(`${ADO_WI}/${ucNumId}?api-version=7.1`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: adoAuthHeader(token),
+              'Content-Type': 'application/json-patch+json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify([{
+              op: 'add',
+              path: '/relations/-',
+              value: {
+                rel: 'System.LinkTypes.Hierarchy-Forward',
+                url: `${ADO_WI}/${timesheetId}`,
+                attributes: { comment: '' },
+              },
+            }]),
+          });
+          if (!linkRes.ok) {
+            const d = await linkRes.json().catch(() => null);
+            linkError = d?.message || `Erro ao vincular UC (HTTP ${linkRes.status})`;
+          }
+        } catch (e) {
+          linkError = e.message;
+        }
+      }
+    }
+
+    res.status(201).json({ id: timesheetId, url: htmlUrl, ...(linkError ? { linkError } : {}) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -146,6 +180,147 @@ router.patch('/timesheet/:id', async (req, res) => {
       ?? `https://dev.azure.com/${ORG}/${PROJECT}/_workitems/edit/${wiId}`;
 
     res.json({ id: adoData?.id ?? wiId, url: htmlUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/workitems/timesheet/:id/link — vincula um UC como pai do Timesheet no ADO
+router.post('/timesheet/:id/link', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado no servidor' });
+
+  const wiId = Number(req.params.id);
+  if (!wiId) return res.status(400).json({ error: 'ID inválido' });
+
+  const { ucId } = req.body;
+  if (!ucId) return res.status(400).json({ error: 'ucId é obrigatório' });
+
+  const ucNumId = Number(String(ucId).replace(/\D/g, ''));
+  if (!ucNumId) return res.status(400).json({ error: 'ucId inválido' });
+
+  // PATCH no UC (pai) com Hierarchy-Forward apontando para o Timesheet (filho)
+  // Mesma operação que o botão "Add Link → Child" faz no ADO a partir do UC
+  const ops = [{
+    op: 'add',
+    path: '/relations/-',
+    value: {
+      rel: 'System.LinkTypes.Hierarchy-Forward',
+      url: `${ADO_WI}/${wiId}`,
+      attributes: { comment: '' },
+    },
+  }];
+
+  try {
+    const adoRes = await fetch(`${ADO_WI}/${ucNumId}?api-version=7.1`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: adoAuthHeader(token),
+        'Content-Type': 'application/json-patch+json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(ops),
+    });
+
+    const rawText = await adoRes.text();
+    let adoData = null;
+    try { adoData = rawText ? JSON.parse(rawText) : null; } catch { /* ignore */ }
+
+    if (!adoRes.ok) {
+      if (adoRes.status === 401 || adoRes.status === 403) {
+        return res.status(403).json({ error: `Sem permissão (HTTP ${adoRes.status}). Verifique o escopo do ADO_TOKEN.` });
+      }
+      return res.status(adoRes.status).json({ error: adoData?.message || `ADO ${adoRes.status}` });
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/workitems/timesheet/:id/links — retorna o UC pai vinculado ao Timesheet
+// Usa WIQL para consultar do lado do pai (UC) e encontrar Hierarchy-Forward → Timesheet
+router.get('/timesheet/:id/links', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado' });
+
+  const wiId = Number(req.params.id);
+  if (!wiId) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const wiqlUrl = `https://dev.azure.com/${ORG}/${PROJECT}/_apis/wit/wiql?api-version=7.1`;
+    const wiqlRes = await fetch(wiqlUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: adoAuthHeader(token),
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        query: `SELECT [System.Id] FROM WorkItemLinks WHERE [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward' AND [Target].[System.Id] = ${wiId} MODE (MustContain)`,
+      }),
+    });
+
+    const rawText = await wiqlRes.text();
+    let wiqlData = null;
+    try { wiqlData = rawText ? JSON.parse(rawText) : null; } catch { /* ignore */ }
+
+    if (!wiqlRes.ok) {
+      return res.status(wiqlRes.status).json({ error: wiqlData?.message || `ADO ${wiqlRes.status}` });
+    }
+
+    // workItemRelations: root items têm source=null; os links reais têm source=UC e target=Timesheet
+    const parents = (wiqlData?.workItemRelations || [])
+      .filter(r => r.rel === 'System.LinkTypes.Hierarchy-Forward' && r.source != null && r.target?.id === wiId)
+      .map(r => ({ ucId: r.source.id }));
+
+    res.json({ parents });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/workitems/timesheet/:id/link/:ucId — remove vínculo pai
+router.delete('/timesheet/:id/link/:ucId', async (req, res) => {
+  const token = process.env.ADO_TOKEN;
+  if (!token) return res.status(500).json({ error: 'ADO_TOKEN não configurado' });
+
+  const wiId    = Number(req.params.id);
+  const ucNumId = Number(req.params.ucId);
+  if (!wiId || !ucNumId) return res.status(400).json({ error: 'IDs inválidos' });
+
+  try {
+    // GET no UC (pai) para encontrar o Hierarchy-Forward apontando ao Timesheet
+    const getRes  = await fetch(`${ADO_WI}/${ucNumId}?$expand=relations&api-version=7.1`, {
+      headers: { Authorization: adoAuthHeader(token), Accept: 'application/json' },
+    });
+    const getData = await getRes.json();
+    if (!getRes.ok) return res.status(getRes.status).json({ error: getData?.message || `ADO ${getRes.status}` });
+
+    const relations = getData?.relations || [];
+    const idx = relations.findIndex(
+      r => r.rel === 'System.LinkTypes.Hierarchy-Forward' && r.url.endsWith(`/${wiId}`)
+    );
+    if (idx === -1) return res.status(404).json({ error: 'Vínculo não encontrado' });
+
+    // Remove a relação do UC (pai)
+    const delRes = await fetch(`${ADO_WI}/${ucNumId}?api-version=7.1`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: adoAuthHeader(token),
+        'Content-Type': 'application/json-patch+json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify([{ op: 'remove', path: `/relations/${idx}` }]),
+    });
+
+    if (!delRes.ok) {
+      const delData = await delRes.json().catch(() => null);
+      return res.status(delRes.status).json({ error: delData?.message || `ADO ${delRes.status}` });
+    }
+
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
  */
 export function useTimesheetData() {
   const [data, setData]       = useState([]);
+  const [ucData, setUcData]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -35,7 +36,10 @@ export function useTimesheetData() {
         if (!res.ok) return res.json().then((b) => Promise.reject(new Error(b.error ?? `HTTP ${res.status}`)));
         return res.json();
       })
-      .then((all) => setData(all.filter((item) => item.workItemType === 'Timesheet' && item.projeto === 'Roadmap 2026')))
+      .then((all) => {
+        setData(all.filter((item) => item.workItemType === 'Timesheet'   && item.projeto === 'Roadmap 2026'));
+        setUcData(all.filter((item) => item.workItemType === 'Caso de Uso' && item.projeto === 'Roadmap 2026'));
+      })
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err);
       })
@@ -44,5 +48,5 @@ export function useTimesheetData() {
     return () => controller.abort();
   }, [retryCount]);
 
-  return { data, loading, error, retry };
+  return { data, ucData, loading, error, retry };
 }

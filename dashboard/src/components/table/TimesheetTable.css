@@ -181,6 +181,17 @@ button.criar-timesheet-btn {
 
 .tsmodal-input::placeholder { color: var(--color-text-muted); }
 
+.tsmodal-input--autofill {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: var(--color-surface-1, var(--color-surface-2));
+}
+
+.tsmodal-input--autofill-filled {
+  opacity: 1;
+  color: var(--color-text-secondary);
+}
+
 .tsmodal-input:focus,
 .tsmodal-select:focus {
   border-color: var(--color-accent);
@@ -395,4 +406,238 @@ button.criar-timesheet-btn {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--color-accent);
+}
+
+/* ── Gear item danger ───────────────────────────────────────────── */
+.gear-item--danger { color: var(--color-er); }
+.gear-item--danger:hover {
+  background: var(--color-er-bg);
+  color: var(--color-er);
+}
+
+/* ── UC Search Field ────────────────────────────────────────────── */
+.uc-search-wrap {
+  position: relative;
+}
+
+.uc-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.uc-search-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.uc-search-item:hover {
+  background: var(--color-surface-2);
+}
+
+.uc-search-item-id {
+  font-size: 0.69rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: monospace;
+}
+
+.uc-search-item-title {
+  font-size: 0.78rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uc-search-empty {
+  display: block;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* ── UC Selected Chip ───────────────────────────────────────────── */
+.uc-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--color-accent-bg, rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: var(--radius-md);
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+.uc-selected-id {
+  font-size: 0.69rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.uc-selected-title {
+  font-size: 0.78rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.uc-selected-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-er);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms;
+  padding: 0;
+}
+
+.uc-selected-remove:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* ── UC loading state in modal ──────────────────────────────────── */
+.uc-search-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 36px;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── Modal hint text ────────────────────────────────────────────── */
+.tsmodal-hint {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* ── Danger button ──────────────────────────────────────────────── */
+.tsmodal-btn--danger {
+  background: #dc2626;
+  border: 1px solid #dc2626;
+  color: #fff;
+}
+
+.tsmodal-btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+/* ── Remover Link Modal ─────────────────────────────────────────── */
+.rmlink-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tsmodal-in 180ms ease-out both;
+}
+
+.rmlink-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 130px;
+}
+
+.rmlink-loading,
+.rmlink-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 80px;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.rmlink-desc {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rmlink-uc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.rmlink-uc-id {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: monospace;
+}
+
+.rmlink-uc-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.rmlink-uc-state {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.rmlink-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 120px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.rmlink-success p { margin: 0; }
+
+.rmlink-success-icon {
+  color: #16a34a;
 }

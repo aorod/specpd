@@ -19,7 +19,7 @@ import ProfileMenu from '../components/profile/ProfileMenu.jsx';
 import './UseCasePage.css';
 
 export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle, onNavigate }) {
-  const { data: rawData, loading, error, retry } = useTimesheetData();
+  const { data: rawData, ucData, loading, error, retry } = useTimesheetData();
   const { filters, filteredData, toggleFilter, setSingleFilter, clearFilters, clearFilter, isActive, activeCount } = useTimesheetFilters(rawData);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState('');
@@ -424,7 +424,7 @@ export default function TimesheetPage({ theme, setTheme, menuOpen, onMenuToggle,
       case 'atividade':
         return <RequisitoChart data={porAtividadeHoras} forceCollapsed={chartsCollapsed} title="Horas por Atividade" tooltipLabel="Total de horas" />;
       case 'tabela':
-        return <TimesheetTable data={displayData} rawData={rawData} />;
+        return <TimesheetTable data={displayData} rawData={rawData} ucData={ucData} />;
       default:
         return null;
     }
